@@ -1,0 +1,166 @@
+# action.yml
+name: 'Maven Release'
+author: https://github.com/emergentdotorg/github-actions
+description: 'Release your java application and publish artifacts to GitHub Packages'
+branding:
+  color: blue
+  icon: unlock
+inputs:
+  release-branch-name:
+    description: 'Filter the branch to execute the release on'
+    required: false
+
+  maven-local-repo-path:
+    description: 'The maven local repository path'
+    required: false
+    default: '$M2_HOME/repository'
+
+  maven-repo-server-id:
+    description: 'Maven server repository id to push the artefacts to'
+    required: true
+  maven-repo-server-username:
+    description: 'Maven server repository username'
+    required: true
+  maven-repo-server-password:
+    description: 'Maven server repository password'
+    required: true
+
+  git-release-bot-name:
+    description: 'The git user name for commiting the release'
+    required: false
+    default: 'github-actions[bot]'
+  git-release-bot-email:
+    description: 'The git user email for commiting the release'
+    required: false
+    default: '41898282+github-actions[bot]@users.noreply.github.com'
+
+  access-token:
+    description: 'Github access token. https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line'
+    required: true
+
+
+  maven-next-release-version:
+    required: false
+    default: ''
+
+  maven-next-snapshot-version:
+    required: false
+    default: ''
+
+  maven-release-args:
+    description: 'Inject arguments in mvn docker build and push.'
+    required: false
+    default: ''
+
+  maven-release-publish:
+    description: 'Publish the released artifact to GitHub Packages'
+    required: false
+
+  maven-snapshot-publish:
+    description: 'Publish the new post release snapshot artifact to GitHub Packages'
+    required: false
+
+  maven-publish-args:
+    description: 'Inject arguments in mvn publish command, ex: -Dskip.unit.tests=true - to skip the tests'
+    required: false
+
+outputs:
+  maven-release-version:
+    description: "The release version that was built and tagged"
+    value: ${{ steps.release-maven-step.outputs.maven-release-version }}
+  maven-snapshot-version:
+    description: "The latest version for development after release"
+    value: ${{ steps.release-maven-step.outputs.maven-snapshot-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: |
+          8
+        mvn-toolchain-vendor: Eclipse Temurin
+        cache: maven
+        settings-path: ${{ github.workspace }} # directory for the settings.xml file
+        server-id: ${{ inputs.maven-repo-server-id }}
+        server-username: 'MAVEN_REPO_SERVER_USERNAME'
+        server-password: 'MAVEN_REPO_SERVER_PASSWORD'
+
+    - uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: 3.9.9
+
+    - name: Set up Maven settings.xml
+      uses: s4u/maven-settings-action@v3.0.0
+      with:
+        path: ${{ github.workspace }}/settings.xml
+        githubServer: true
+        servers: |
+          [{
+            "id": "${{ env.DEPLOY_REPO_ID }}",
+            "username": "${env.DEPLOY_USERNAME}",
+            "password": "${env.DEPLOY_PASSWORD}"
+          }]
+        repositories: |
+          [{
+            "id": "emergent-releases",
+            "name": "Emergent Releases",
+            "snapshots": {"enabled":false},
+            "url": "${{ env.DEPLOY_REPO_URL }}"
+          }]
+
+    - name: Configure Git
+      shell: bash
+      env:
+        GIT_RELEASE_BOT_NAME: ${{ inputs.git-release-bot-name }}
+        GIT_RELEASE_BOT_EMAIL: ${{ inputs.git-release-bot-email }}
+      run: |
+        # Note: the following account information will not work on GHES
+        [ -z "$(git config --get user.name)" ] && git config --local user.name "${GIT_RELEASE_BOT_NAME}"
+        [ -z "$(git config --get user.email)" ] && git config  --local user.email "${GIT_RELEASE_BOT_EMAIL}"
+
+    - name: Release with Maven
+      id: release-maven-step
+      shell: bash
+      env:
+        RELEASE_PLUGIN_COORDS: org.apache.maven.plugins:maven-release-plugin:3.1.1
+        MAVEN_NEXT_RELEASE_VER: ${{ github.event.inputs.next-release-version }}
+        MAVEN_NEXT_SNAPSHOT_VER: ${{ github.event.inputs.next-snapshot-version }}
+        MAVEN_LOCAL_REPO_PATH: ${{ inputs.maven-local-repo-path }}
+        MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
+        MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
+        MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
+        GITHUB_ACCESS_TOKEN: ${{ inputs.access-token }}
+        MAVEN_USER_SETTINGS_PATH: ${{ github.workspace }}/settings.xml"
+      run: |        
+
+        function getRelProp {
+          grep "^${1}=" release.properties|cut -d'=' -f2
+        }
+
+        local optsArr=( )
+        optsArr+=( "-B" )
+        optsArr+=( "-Dresume=false" )
+        optsArr+=( "-DpushChanges=true" )
+        optsArr+=( "-DlocalCheckout=true" )
+        optsArr+=( "-DtagNameFormat=@{project.version}" )
+        optsArr+=( "-DscmCommentPrefix=[GitHub] " )
+        optsArr+=( "-Darguments=-Dmaven.javadoc.skip=true" )
+        
+        if [ -n "${MAVEN_USER_SETTINGS_PATH}" ] ; then optsArr+=( "-s" "${MAVEN_USER_SETTINGS_PATH}" ) ; fi
+        if [ -n "${MAVEN_LOCAL_REPO_PATH}" ] ; then optsArr+=( "-Dmaven.repo.local=${MAVEN_LOCAL_REPO_PATH}" ) ; fi
+        if [ -n "${MAVEN_NEXT_RELEASE_VER}" ] ; then optsArr+=( "-DreleaseVersion=${MAVEN_NEXT_RELEASE_VER}" ) ; fi
+        if [ -n "${MAVEN_NEXT_SNAPSHOT_VER}" ] ; then optsArr+=( "-DdevelopmentVersion=${MAVEN_NEXT_SNAPSHOT_VER}" ) ; fi
+
+        mvn "${optsArr[@]}" release:prepare
+        MAVEN_RELEASE_VERSION="$( getRelProp release.version )"
+        MAVEN_SNAPSHOT_VERSION="$( getRelProp snapshot.version )"
+        mvn "${optsArr[@]}" release:perform
+
+        echo "maven-release-version=${MAVEN_RELEASE_VERSION}" >> $GITHUB_OUTPUT
+        echo "maven-snapshot-version=${MAVEN_SNAPSHOT_VERSION}" >> $GITHUB_OUTPUT
+
+        #        $GITHUB_ACTION_PATH/maven-release.sh "${argsArr[@]}"

@@ -10,9 +10,9 @@ inputs:
     required: false
 
   maven-local-repo-path:
-    description: 'The maven local repository path'
+    description: 'The maven local repository path override'
     required: false
-    default: '$M2_HOME/repository'
+    default: ''
 
   maven-repo-server-id:
     description: 'Maven server repository id to push the artefacts to'
@@ -93,9 +93,8 @@ runs:
       with:
         distribution: 'temurin'
         java-version: 8
-        mvn-toolchain-vendor: Eclipse Temurin
         cache: maven
-        settings-path: ${{ github.workspace }} # directory for the settings.xml file
+        settings-path: ${{ github.workspace }}
         server-id: ${{ inputs.maven-repo-server-id }}
         server-username: 'MAVEN_REPO_SERVER_USERNAME'
         server-password: 'MAVEN_REPO_SERVER_PASSWORD'
@@ -105,9 +104,6 @@ runs:
       run: |
         echo "--- SHOWING ENVIRONMENT ---"
         env | sort
-        echo "--- SHOWING SETTINGS : ${GITHUB_WORKSPACE}/settings.xml  ---"
-        cat ${GITHUB_WORKSPACE}/settings.xml
-        echo "--- DONE ---"
 
     - uses: stCarolas/setup-maven@v5
       with:
@@ -116,7 +112,6 @@ runs:
     - name: Set up Maven settings.xml
       uses: s4u/maven-settings-action@v3.0.0
       with:
-        override: 'true'
         path: ${{ github.workspace }}/settings.xml
         githubServer: false
         servers: |
@@ -129,15 +124,6 @@ runs:
             "username": "${env.MAVEN_REPO_SERVER_USERNAME}",
             "password": "${env.MAVEN_REPO_SERVER_PASSWORD}"
           }]
-
-    - name: Show config
-      shell: bash
-      run: |
-        echo "--- SHOWING ENVIRONMENT ---"
-        env | sort
-        echo "--- SHOWING SETTINGS : ${GITHUB_WORKSPACE}/settings.xml  ---"
-        cat ${GITHUB_WORKSPACE}/settings.xml
-        echo "--- DONE ---"
 
     - name: Configure Git
       shell: bash
@@ -162,15 +148,12 @@ runs:
         GITHUB_SERVER_ID: ${{ inputs.github-server-id }}
         GITHUB_SERVER_ACTOR: ${{ inputs.github-server-actor }}
         GITHUB_SERVER_TOKEN: ${{ inputs.github-server-token }}
-        MAVEN_USER_SETTINGS_PATH: ${{ github.workspace }}/settings.xml
         MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
         MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
         MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
-        MAVEN_LOCAL_REPO_PATH: ${{ inputs.maven-local-repo-path }}
         MAVEN_NEXT_RELEASE_VER: ${{ github.event.inputs.next-release-version }}
         MAVEN_NEXT_SNAPSHOT_VER: ${{ github.event.inputs.next-snapshot-version }}
+        MAVEN_LOCAL_REPO_PATH: ${{ inputs.maven-local-repo-path }}
       run: |
-        ls -alh ${GITHUB_WORKSPACE}
-        echo PWD="$(pwd)"
-        $GITHUB_ACTION_PATH/mvn-release.sh release
+        $GITHUB_ACTION_PATH/mvn-release.sh release -s "${GITHUB_WORKSPACE}/settings.xml"
 

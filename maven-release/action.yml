@@ -5,15 +5,15 @@ branding:
   color: blue
   icon: unlock
 inputs:
-  maven-repo-server-id:
-    description: 'Maven server repository id to push the artefacts to'
-    required: true
-  maven-repo-server-username:
-    description: 'Maven server repository username'
-    required: true
-  maven-repo-server-password:
-    description: 'Maven server repository password'
-    required: true
+  #  maven-repo-server-id:
+  #    description: 'Maven server repository id to push the artefacts to'
+  #    required: true
+  #  maven-repo-server-username:
+  #    description: 'Maven server repository username'
+  #    required: true
+  #  maven-repo-server-password:
+  #    description: 'Maven server repository password'
+  #    required: true
 
   git-release-bot-name:
     description: 'The git user name for commiting the release'
@@ -24,20 +24,20 @@ inputs:
     required: false
     default: '41898282+github-actions[bot]@users.noreply.github.com'
 
-  github-server-id:
-    description: 'maven settings.xml server id for auth'
-    default: 'github'
-  github-server-actor:
-    description: |
-      Github access user.
-      Maybe default to github.actor
-    required: true
-  github-server-token:
-    description: |
-      Github access token.
-      Maybe default to github.token
-      https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
-    required: true
+  #  github-server-id:
+  #    description: 'maven settings.xml server id for auth'
+  #    default: 'github'
+  #  github-server-actor:
+  #    description: |
+  #      Github access user.
+  #      Maybe default to github.actor
+  #    required: true
+  #  github-server-token:
+  #    description: |
+  #      Github access token.
+  #      Maybe default to github.token
+  #      https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+  #    required: true
 
   maven-release-plugin-version:
     description: 'Override the maven release plugin version'
@@ -160,12 +160,12 @@ runs:
       id: exec-maven-release
       env:
         GITHUB_ACTION_PATH: ${{ github.action_path }}
-        GITHUB_SERVER_ID: ${{ inputs.github-server-id }}
-        GITHUB_SERVER_ACTOR: ${{ inputs.github-server-actor }}
-        GITHUB_SERVER_TOKEN: ${{ inputs.github-server-token }}
-        MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
-        MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
-        MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
+        #        GITHUB_SERVER_ID: ${{ inputs.github-server-id }}
+        #        GITHUB_SERVER_ACTOR: ${{ inputs.github-server-actor }}
+        #        GITHUB_SERVER_TOKEN: ${{ inputs.github-server-token }}
+        #        MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
+        #        MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
+        #        MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
         MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
       run: |        
         source $GITHUB_ACTION_PATH/utils-include-env.sh

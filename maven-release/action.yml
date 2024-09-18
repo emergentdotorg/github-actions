@@ -72,6 +72,25 @@ inputs:
     required: false
     default: ''
 
+  maven-settings-servers:
+    description: 'servers definition in json array, eg: [{"id": "serverId", "username": "username", "password": "password"}]'
+    required: false
+  maven-settings-mirrors:
+    description: 'mirrors definition in json array, eg: [{"id": "id", "name": "name", "mirrorOf": "mirrorOf", "url": "url"}]'
+    required: false
+  maven-settings-proxies:
+    description: 'proxies definition in json array, eg: [{"id": "id", "active": "active", "protocol": "protocol", "host": "hostl", "port": "port", "nonProxyHosts", "nonProxyHosts"}]'
+  maven-settings-properties:
+    description: 'json array with properties, eg [{"propertyName1": "propertyValue1"}, {"propertyName2": "propertyValue2"}]'
+    required: false
+  maven-settings-githubServer:
+    description: 'add to settings.xml servers server-id: github; username=$GITHUB_ACTOR and password=$GITHUB_TOKEN'
+    default: "true"
+    required: false
+  maven-settings-repositories:
+    description: 'list of custom repositories as json array, e.g: [{"id":"repoId","name":"repoName","url":"url","snapshots":{"enabled":true}}]'
+    required: false
+
 outputs:
   maven-scm-tag:
     description: "The release tag"
@@ -93,9 +112,6 @@ runs:
         java-version: 8
         cache: maven
         settings-path: ${{ github.workspace }}
-        server-id: ${{ inputs.maven-repo-server-id }}
-        server-username: 'MAVEN_REPO_SERVER_USERNAME'
-        server-password: 'MAVEN_REPO_SERVER_PASSWORD'
 
     - uses: stCarolas/setup-maven@v5
       with:
@@ -104,17 +120,12 @@ runs:
     - uses: s4u/maven-settings-action@v3.0.0
       with:
         path: ${{ github.workspace }}/settings.xml
-        githubServer: false
-        servers: |
-          [{
-            "id": "${{ inputs.github-server-id }}",
-            "username": "${env.GITHUB_SERVER_ACTOR}",
-            "password": "${env.GITHUB_SERVER_TOKEN}"
-          },{
-            "id": "${{ inputs.maven-repo-server-id }}",
-            "username": "${env.MAVEN_REPO_SERVER_USERNAME}",
-            "password": "${env.MAVEN_REPO_SERVER_PASSWORD}"
-          }]
+        servers: ${{ inputs.maven-settings-servers }}
+        mirrors: ${{ inputs.maven-settings-mirrors }}
+        proxies: ${{ inputs.maven-settings-proxies }}
+        properties: ${{ inputs.maven-settings-properties }}
+        githubServer: ${{ inputs.maven-settings-githubServer }}
+        repositories: ${{ inputs.maven-settings-repositories }}
 
     - uses: actions/github-script@v7
       id: set-combined-opts
@@ -137,6 +148,15 @@ runs:
           return outputArr.join("\n");
 
     - shell: bash
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        echo "--- GITHUB_CONTEXT ---"
+        echo "$GITHUB_CONTEXT"
+        echo "--- ENVIRONMENT ---"
+        env | sort
+
+    - shell: bash
       id: exec-maven-release
       env:
         GITHUB_ACTION_PATH: ${{ github.action_path }}
@@ -147,7 +167,7 @@ runs:
         MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
         MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
         MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
-      run: |
+      run: |        
         source $GITHUB_ACTION_PATH/utils-include-env.sh
         
         [ -z "$(git config --get user.name)" ] && git config --local user.name "${{ inputs.git-release-bot-name }}"

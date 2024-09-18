@@ -169,7 +169,8 @@ runs:
           echo "${{inputs.maven-additional-arglist}}" 
         )"
         mvnArgsArr+=( "-Dresume=false" )
-        mvnArgsArr+=( "-DlocalCheckout=true" )        
+        mvnArgsArr+=( "-DlocalCheckout=true" )
+        mvnArgsArr+=( "-B" "--no-transfer-progress" )
         mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
 
         execMvn "${mvnArgsArr[@]}" release:prepare

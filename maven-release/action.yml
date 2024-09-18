@@ -12,27 +12,9 @@ inputs:
     description: 'Java distribution. See the list of supported distributions in README file'
     required: false
     default: 'temurin'
-
   maven-version:
     description: 'Version Spec of the version to use.  Examples: 10.x, 10.15.1, >=10.15.0'
     default: '3.9.9'
-
-  #  server-id:
-  #    description: 'ID of the distributionManagement repository in the pom.xml
-  #       file. Default is `github`'
-  #    required: false
-  #    default: 'github'
-  #  server-username:
-  #    description: 'Environment variable name for the username for authentication
-  #       to the Apache Maven repository. Default is $GITHUB_ACTOR'
-  #    required: false
-  #    default: 'GITHUB_ACTOR'
-  #  server-password:
-  #    description: 'Environment variable name for password or token for
-  #       authentication to the Apache Maven repository. Default is $GITHUB_TOKEN'
-  #    required: false
-  #    default: 'GITHUB_TOKEN'
-
   git-release-bot-name:
     description: 'The git user name for commiting the release'
     required: false

@@ -5,15 +5,33 @@ branding:
   color: blue
   icon: unlock
 inputs:
-  #  maven-repo-server-id:
-  #    description: 'Maven server repository id to push the artefacts to'
-  #    required: true
-  #  maven-repo-server-username:
-  #    description: 'Maven server repository username'
-  #    required: true
-  #  maven-repo-server-password:
-  #    description: 'Maven server repository password'
-  #    required: true
+
+  java-version:
+    description: 'The Java version to set up. Takes a whole or semver Java version. See examples of supported syntax in README file'
+  java-distribution:
+    description: 'Java distribution. See the list of supported distributions in README file'
+    required: false
+    default: 'temurin'
+
+  maven-version:
+    description: 'Version Spec of the version to use.  Examples: 10.x, 10.15.1, >=10.15.0'
+    default: '3.9.9'
+
+  #  server-id:
+  #    description: 'ID of the distributionManagement repository in the pom.xml
+  #       file. Default is `github`'
+  #    required: false
+  #    default: 'github'
+  #  server-username:
+  #    description: 'Environment variable name for the username for authentication
+  #       to the Apache Maven repository. Default is $GITHUB_ACTOR'
+  #    required: false
+  #    default: 'GITHUB_ACTOR'
+  #  server-password:
+  #    description: 'Environment variable name for password or token for
+  #       authentication to the Apache Maven repository. Default is $GITHUB_TOKEN'
+  #    required: false
+  #    default: 'GITHUB_TOKEN'
 
   git-release-bot-name:
     description: 'The git user name for commiting the release'
@@ -23,50 +41,28 @@ inputs:
     description: 'The git user email for commiting the release'
     required: false
     default: '41898282+github-actions[bot]@users.noreply.github.com'
-
-  #  github-server-id:
-  #    description: 'maven settings.xml server id for auth'
-  #    default: 'github'
-  #  github-server-actor:
-  #    description: |
-  #      Github access user.
-  #      Maybe default to github.actor
-  #    required: true
-  #  github-server-token:
-  #    description: |
-  #      Github access token.
-  #      Maybe default to github.token
-  #      https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
-  #    required: true
-
   maven-release-plugin-version:
     description: 'Override the maven release plugin version'
     required: false
     default: ''
-
   maven-next-release-version:
     description: 'The release version string to assign to the next maven release build products.'
     required: false
     default: ''
-
   maven-next-snapshot-version:
     description: 'The snapshot version string to return the main branch to after performing a release.'
     required: false
     default: ''
-
   maven-scm-comment-prefix:
     description: 'The maven release scmCommentPrefix property value'
     default: '[GitHub] '
-
   maven-tag-name-format:
     description: 'The maven release tagNameFormat property value'
     default: ''
-
   maven-local-repo-path:
     description: 'The maven local repository path override'
     required: false
     default: ''
-
   maven-additional-arglist:
     description: 'Additional maven arguments delimited by newline to preserve spaces'
     required: false
@@ -108,14 +104,14 @@ runs:
 
     - uses: actions/setup-java@v4
       with:
-        distribution: 'temurin'
-        java-version: 8
-        cache: maven
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.java-distribution }}
         settings-path: ${{ github.workspace }}
+        cache: maven
 
     - uses: stCarolas/setup-maven@v5
       with:
-        maven-version: 3.9.9
+        maven-version: ${{ maven-version }}
 
     - uses: s4u/maven-settings-action@v3.0.0
       with:
@@ -151,6 +147,7 @@ runs:
       env:
         GITHUB_CONTEXT: ${{ toJson(github) }}
       run: |
+        exit 0
         echo "--- GITHUB_CONTEXT ---"
         echo "$GITHUB_CONTEXT"
         echo "--- ENVIRONMENT ---"
@@ -160,12 +157,6 @@ runs:
       id: exec-maven-release
       env:
         GITHUB_ACTION_PATH: ${{ github.action_path }}
-        #        GITHUB_SERVER_ID: ${{ inputs.github-server-id }}
-        #        GITHUB_SERVER_ACTOR: ${{ inputs.github-server-actor }}
-        #        GITHUB_SERVER_TOKEN: ${{ inputs.github-server-token }}
-        #        MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
-        #        MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
-        #        MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
         MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
       run: |        
         source $GITHUB_ACTION_PATH/utils-include-env.sh

@@ -175,7 +175,7 @@ runs:
 
         execMvn "${mvnArgsArr[@]}" release:prepare
         #readReleaseProperties
-#        execMvn "${mvnArgsArr[@]}" release:perform
+        execMvn "${mvnArgsArr[@]}" release:perform
 
         # if pushChanges=false we'd need the next line uncommented    
         #git push --follow-tags --atomic || failOnError

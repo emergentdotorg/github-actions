@@ -111,7 +111,7 @@ runs:
 
     - uses: stCarolas/setup-maven@v5
       with:
-        maven-version: ${{ maven-version }}
+        maven-version: ${{ inputs.maven-version }}
 
     - uses: s4u/maven-settings-action@v3.0.0
       with:
@@ -143,15 +143,14 @@ runs:
           }
           return outputArr.join("\n");
 
-    - shell: bash
-      env:
-        GITHUB_CONTEXT: ${{ toJson(github) }}
-      run: |
-        exit 0
-        echo "--- GITHUB_CONTEXT ---"
-        echo "$GITHUB_CONTEXT"
-        echo "--- ENVIRONMENT ---"
-        env | sort
+    #    - shell: bash
+    #      env:
+    #        GITHUB_CONTEXT: ${{ toJson(github) }}
+    #      run: |
+    #        echo "--- GITHUB_CONTEXT ---"
+    #        echo "$GITHUB_CONTEXT"
+    #        echo "--- ENVIRONMENT ---"
+    #        env | sort
 
     - shell: bash
       id: exec-maven-release

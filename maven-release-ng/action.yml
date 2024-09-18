@@ -164,8 +164,10 @@ runs:
         execMvn "${mvnArgsArr[@]}" release:prepare
         readReleaseProperties
         execMvn "${mvnArgsArr[@]}" release:perform
+
+        # if pushChanges=false we'd need the next line uncommented    
+        #git push --follow-tags --atomic || failOnError
   
-        # For actions or steps that come after in this workflow
         echo "maven-scm-tag=${MAVEN_SCM_TAG:?}" >> ${GITHUB_OUTPUT}
         echo "maven-release-version=${MAVEN_RELEASE_VERSION:?}" >> ${GITHUB_OUTPUT}
         echo "maven-development-version=${MAVEN_DEVELOPMENT_VERSION:?}" >> ${GITHUB_OUTPUT}

@@ -5,15 +5,6 @@ branding:
   color: blue
   icon: unlock
 inputs:
-  release-branch-name:
-    description: 'Filter the branch to execute the release on'
-    required: false
-
-  maven-local-repo-path:
-    description: 'The maven local repository path override'
-    required: false
-    default: ''
-
   maven-repo-server-id:
     description: 'Maven server repository id to push the artefacts to'
     required: true
@@ -48,6 +39,11 @@ inputs:
       https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
     required: true
 
+  maven-release-plugin-version:
+    description: 'Override the maven release plugin version'
+    required: false
+    default: ''
+
   maven-next-release-version:
     description: 'The release version string to assign to the next maven release build products.'
     required: false
@@ -58,37 +54,39 @@ inputs:
     required: false
     default: ''
 
-  maven-release-args:
-    description: 'Inject arguments in mvn docker build and push.'
+  maven-scm-comment-prefix:
+    description: 'The maven release scmCommentPrefix property value'
+    default: '[GitHub] '
+
+  maven-tag-name-format:
+    description: 'The maven release tagNameFormat property value'
+    default: ''
+
+  maven-local-repo-path:
+    description: 'The maven local repository path override'
     required: false
     default: ''
 
-  maven-release-publish:
-    description: 'Publish the released artifact to GitHub Packages'
+  maven-additional-arglist:
+    description: 'Additional maven arguments delimited by newline to preserve spaces'
     required: false
-
-  maven-snapshot-publish:
-    description: 'Publish the new post release snapshot artifact to GitHub Packages'
-    required: false
-
-  maven-publish-args:
-    description: 'Inject arguments in mvn publish command, ex: -Dskip.unit.tests=true - to skip the tests'
-    required: false
+    default: ''
 
 outputs:
+  maven-scm-tag:
+    description: "The release tag"
+    value: ${{ steps.exec-maven-release.outputs.maven-scm-tag }}
   maven-release-version:
     description: "The release version that was built and tagged"
     value: ${{ steps.exec-maven-release.outputs.maven-release-version }}
-  maven-snapshot-version:
+  maven-development-version:
     description: "The latest version for development after release"
-    value: ${{ steps.exec-maven-release.outputs.maven-snapshot-version }}
-  maven-release-result-code:
-    description: "The maven release exit code"
-    value: ${{ steps.exec-maven-release.outputs.execution-result-code }}
+    value: ${{ steps.exec-maven-release.outputs.maven-development-version }}
 
 runs:
   using: "composite"
   steps:
+
     - uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
@@ -99,18 +97,11 @@ runs:
         server-username: 'MAVEN_REPO_SERVER_USERNAME'
         server-password: 'MAVEN_REPO_SERVER_PASSWORD'
 
-    - name: Show config
-      shell: bash
-      run: |
-        echo "--- SHOWING ENVIRONMENT ---"
-        env | sort
-
     - uses: stCarolas/setup-maven@v5
       with:
         maven-version: 3.9.9
 
-    - name: Set up Maven settings.xml
-      uses: s4u/maven-settings-action@v3.0.0
+    - uses: s4u/maven-settings-action@v3.0.0
       with:
         path: ${{ github.workspace }}/settings.xml
         githubServer: false
@@ -125,24 +116,28 @@ runs:
             "password": "${env.MAVEN_REPO_SERVER_PASSWORD}"
           }]
 
-    - name: Configure Git
-      shell: bash
-      env:
-        GIT_RELEASE_BOT_NAME: ${{ inputs.git-release-bot-name }}
-        GIT_RELEASE_BOT_EMAIL: ${{ inputs.git-release-bot-email }}
-      run: |
-        [ -z "$(git config --get user.name)" ] && git config --local user.name "${GIT_RELEASE_BOT_NAME}"
-        [ -z "$(git config --get user.email)" ] && git config  --local user.email "${GIT_RELEASE_BOT_EMAIL}"
+    - uses: actions/github-script@v7
+      id: set-combined-opts
+      with:
+        result-encoding: string
+        script: |
+          let inputsObj = {
+            "releaseVersion": "${{ inputs.maven-next-release-version }}",
+            "developmentVersion": "${{ inputs.maven-next-snapshot-version}}",
+            "tagNameFormat": "${{ inputs.maven-tag-name-format }}",
+            "scmCommentPrefix": "${{ inputs.maven-scm-comment-prefix }}",
+            "maven.repo.local": "${{ inputs.maven-local-repo-path }}"
+          };
+          let outputArr = [];
+          for ([key, val] of Object.entries(inputsObj)) {
+            if (val) {
+              outputArr.push( `-D${key}=${val}` );
+            }
+          }
+          return outputArr.join("\n");
 
-    - name: Set GitHub Path
-      run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
-      shell: bash
-      env:
-        GITHUB_ACTION_PATH: ${{ github.action_path }}
-
-    - name: Release with Maven
+    - shell: bash
       id: exec-maven-release
-      shell: bash
       env:
         GITHUB_ACTION_PATH: ${{ github.action_path }}
         GITHUB_SERVER_ID: ${{ inputs.github-server-id }}
@@ -151,9 +146,29 @@ runs:
         MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
         MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
         MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
-        MAVEN_NEXT_RELEASE_VER: ${{ github.event.inputs.next-release-version }}
-        MAVEN_NEXT_SNAPSHOT_VER: ${{ github.event.inputs.next-snapshot-version }}
-        MAVEN_LOCAL_REPO_PATH: ${{ inputs.maven-local-repo-path }}
+        MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
       run: |
-        $GITHUB_ACTION_PATH/mvn-release.sh release -s "${GITHUB_WORKSPACE}/settings.xml"
+        source $GITHUB_ACTION_PATH/utils-include-env.sh
+        
+        [ -z "$(git config --get user.name)" ] && git config --local user.name "${{ inputs.git-release-bot-name }}"
+        [ -z "$(git config --get user.email)" ] && git config  --local user.email "${{ inputs.git-release-bot-email }}"
+
+        readarray -t mvnArgsArr <<<"$(
+          echo "${{steps.set-combined-opts.outputs.result}}" 
+          echo "${{inputs.maven-additional-arglist}}" 
+        )"
+        mvnArgsArr+=( "-Dresume=false" )
+        mvnArgsArr+=( "-DlocalCheckout=true" )        
+        mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
+
+        execMvn "${mvnArgsArr[@]}" release:prepare
+        readReleaseProperties
+        execMvn "${mvnArgsArr[@]}" release:perform
+
+        # if pushChanges=false we'd need the next line uncommented    
+        #git push --follow-tags --atomic || failOnError
+  
+        echo "maven-scm-tag=${MAVEN_SCM_TAG:?}" >> ${GITHUB_OUTPUT}
+        echo "maven-release-version=${MAVEN_RELEASE_VERSION:?}" >> ${GITHUB_OUTPUT}
+        echo "maven-development-version=${MAVEN_DEVELOPMENT_VERSION:?}" >> ${GITHUB_OUTPUT}
 

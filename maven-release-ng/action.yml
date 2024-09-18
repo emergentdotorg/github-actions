@@ -39,6 +39,11 @@ inputs:
       https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
     required: true
 
+  maven-release-plugin-version:
+    description: 'Override the maven release plugin version'
+    required: false
+    default: ''
+
   maven-next-release-version:
     description: 'The release version string to assign to the next maven release build products.'
     required: false
@@ -49,13 +54,13 @@ inputs:
     required: false
     default: ''
 
-  maven-scmCommentPrefix:
-    description: 'The release commit comment prefix'
+  maven-scm-comment-prefix:
+    description: 'The maven release scmCommentPrefix property value'
     default: '[GitHub] '
 
-  maven-tagNameFormat:
-    description: 'The release tag name format'
-    default: '@{project.version}'
+  maven-tag-name-format:
+    description: 'The maven release tagNameFormat property value'
+    default: ''
 
   maven-local-repo-path:
     description: 'The maven local repository path override'
@@ -119,8 +124,8 @@ runs:
           let inputsObj = {
             "releaseVersion": "${{ inputs.maven-next-release-version }}",
             "developmentVersion": "${{ inputs.maven-next-snapshot-version}}",
-            "tagNameFormat": "${{ inputs.maven-tagNameFormat }}",
-            "scmCommentPrefix": "${{ inputs.maven-scmCommentPrefix }}",
+            "tagNameFormat": "${{ inputs.maven-tag-name-format }}",
+            "scmCommentPrefix": "${{ inputs.maven-scm-comment-prefix }}",
             "maven.repo.local": "${{ inputs.maven-local-repo-path }}"
           };
           let outputArr = [];
@@ -141,7 +146,7 @@ runs:
         MAVEN_REPO_SERVER_ID: ${{ inputs.maven-repo-server-id }}
         MAVEN_REPO_SERVER_USERNAME: ${{ inputs.maven-repo-server-username }}
         MAVEN_REPO_SERVER_PASSWORD: ${{ inputs.maven-repo-server-password }}
-        MAVEN_RELEASE_PLUGIN_FQN: org.apache.maven.plugins:maven-release-plugin:3.1.1
+        MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
       run: |
         source $GITHUB_ACTION_PATH/utils-include-env.sh
         

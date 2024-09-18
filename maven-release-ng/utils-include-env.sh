@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 MVNCMD="${MVNCMD:-mvn}"
-MAVEN_RELEASE_PLUGIN_FQN="{MAVEN_RELEASE_PLUGIN_FQN:-release}"
 
 failOnError() {
   local rc=$?
@@ -14,8 +13,8 @@ failOnError() {
 normalizeArg() {
   # Fixup goals with the 'release:' prefix
   val="$1"
-  if [[ "$val" =~ ^release:.* ]] ; then
-      val="${val/^release:/${MAVEN_RELEASE_PLUGIN_FQN}:}"
+  if [ -n "${MAVEN_RELEASE_PLUGIN_VERSION}" ] && [[ "$val" =~ ^release:.* ]] ; then
+      val="${val/^release:/org.apache.maven.plugins:maven-release-plugin:${MAVEN_RELEASE_PLUGIN_VERSION}:}"
   fi
   echo "$val"
 }

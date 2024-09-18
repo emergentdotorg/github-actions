@@ -151,6 +151,7 @@ runs:
         )"
         mvnArgsArr+=( "-Dresume=false" )
         mvnArgsArr+=( "-DlocalCheckout=true" )
+        mvnArgsArr+=( "-DautoVersionSubmodules=true" )        
         mvnArgsArr+=( "-B" "--no-transfer-progress" )
         mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
 

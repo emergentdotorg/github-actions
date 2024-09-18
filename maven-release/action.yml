@@ -158,7 +158,6 @@ runs:
         GITHUB_ACTION_PATH: ${{ github.action_path }}
         MAVEN_RELEASE_PLUGIN_VERSION: ${{ inputs.maven-release-plugin-version }}
       run: |
-        MVNCMD="echo mvn"
         source $GITHUB_ACTION_PATH/utils-include-env.sh
         
         [ -z "$(git config --get user.name)" ] && git config --local user.name "${{ inputs.git-release-bot-name }}"
@@ -174,7 +173,7 @@ runs:
         mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
 
         execMvn "${mvnArgsArr[@]}" release:prepare
-        #readReleaseProperties
+        readReleaseProperties
         execMvn "${mvnArgsArr[@]}" release:perform
 
         # if pushChanges=false we'd need the next line uncommented    

@@ -83,13 +83,22 @@ jobs:
           version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
+
+      - name: Set Release Perform Goals
+        id: set-perform-goals
+        if: ${{ ! inputs.dry-run }}
+        shell: bash
+        # language="shell script"
+        run: |
+          echo "goals=release:perform" >> $GITHUB_OUTPUT
+
       - name: Perform Maven Release
         shell: bash
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
           NEXT_REL_VERSION: ${{ inputs.next-release-version }}
           NEXT_DEV_VERSION: ${{ inputs.next-snapshot-version }}
-          RELEASE_GOALS: ${{ inputs.dry-run && '' || 'release:perform' }}
+          MVN_PERFORM_GOALS: ${{ steps.set-perform-goals.outputs.goals }}
         # language="shell script"
         run: |
           declare -a mvnArgsArr=( "-B" )
@@ -101,8 +110,8 @@ jobs:
           mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
           mvnArgsArr+=( "--no-transfer-progress" )
           mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
-          echo "RELEASE_GOALS=${RELEASE_GOALS}"
-          mvn "${mvnArgsArr[@]}" release:prepare ${RELEASE_GOALS}
+          echo "MVN_PERFORM_GOALS=${MVN_PERFORM_GOALS}"
+          mvn "${mvnArgsArr[@]}" release:prepare ${MVN_PERFORM_GOALS}
 
       - name: Commit Maven Release
         if: ${{ ! inputs.dry-run && success() }}

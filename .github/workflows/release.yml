@@ -1,8 +1,27 @@
 name: Bump version
+
 on:
-  push:
+  workflow_dispatch:
     branches:
       - main
+    inputs:
+      default-bump:
+        description: 'Type of version change'
+        type: choice
+        required: true
+        options:
+          - major
+          - minor
+          - patch
+      custom-tag:
+        description: 'Custom tag name to apply'
+        type: string
+        required: false
+      annotated-tag:
+        description: 'Annotated tag (not lightweight)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build:
@@ -14,9 +33,15 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: ${{ inputs.default-bump }}
+          custom_tag: ${{ inputs.custom-tag }}
+          create_annotated_tag: ${{ inputs.annotated-tag }}
+          tag_prefix: ''
       - name: Create a GitHub release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
+
+

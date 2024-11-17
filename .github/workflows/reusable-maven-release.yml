@@ -26,7 +26,7 @@ on:
         description: 'Skip actually committing or deploying'
         type: boolean
         required: false
-        default: true
+        default: false
 
 env:
   DEPLOY_USERNAME: ${{ secrets.maven_central_actor }}

@@ -1,0 +1,22 @@
+name: Reusable Google Format
+
+on:
+  workflow_call:
+    inputs:
+      dry-run:
+        description: 'Skip actually committing or deploying'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  reformat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # v2 minimum required
+
+      - uses: axel-op/googlejavaformat-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-commit: ${{ inputs.dry-run }}
+          args: "--replace"

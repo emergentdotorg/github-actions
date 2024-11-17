@@ -2,6 +2,11 @@ name: Reusable Maven Release
 
 on:
   workflow_call:
+    # Map the workflow outputs to job outputs
+    outputs:
+      version:
+        description: "The new release version"
+        value: ${{ jobs.release.outputs.version }}
     inputs:
       java-version:
         description: 'JDK version to build with'
@@ -12,6 +17,16 @@ on:
         type: string
         required: false
         default: central
+      scm-comment-prefix:
+        description: 'SCM Comment Prefix'
+        type: string
+        required: false
+        default: '[GitHub] '
+      tag-name-format:
+        description: 'Tag Name Format'
+        type: string
+        required: false
+        default: '@{project.version}'
       next-release-version:
         description: 'Next Release Version'
         type: string
@@ -36,6 +51,9 @@ env:
 jobs:
   release:
     runs-on: ubuntu-20.04
+    # Map the job outputs to step outputs
+    outputs:
+      output1: ${{ steps.copy-version-info.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -95,19 +113,23 @@ jobs:
         shell: bash
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
+          SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}
+          TAG_NAME_FORMAT: ${{ inputs.tag-name-format }}
           NEXT_REL_VERSION: ${{ inputs.next-release-version }}
           NEXT_DEV_VERSION: ${{ inputs.next-snapshot-version }}
           MVN_PERFORM_GOALS: ${{ steps.set-perform-goals.outputs.goals }}
         # language="shell script"
         run: |
           declare -a mvnArgsArr=( "-B" )
-          if [ -n "${NEXT_REL_VERSION}" ] ; then mvnArgsArr+=( "-DreleaseVersion=${NEXT_REL_VERSION}" ) ; fi
-          if [ -n "${NEXT_DEV_VERSION}" ] ; then mvnArgsArr+=( "-DdevelopmentVersion=${NEXT_DEV_VERSION}" ) ; fi
+          mvnArgsArr+=( "--no-transfer-progress" )
           mvnArgsArr+=( "-DpushChanges=false" )
           mvnArgsArr+=( "-DlocalCheckout=true" )
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
           mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
-          mvnArgsArr+=( "--no-transfer-progress" )
+          mvnArgsArr+=( "-DscmCommentPrefix=${SCM_COMMENT_PREFIX}" )
+          mvnArgsArr+=( "-DtagNameFormat=${TAG_NAME_FORMAT}" )
+          if [ -n "${NEXT_REL_VERSION}" ] ; then mvnArgsArr+=( "-DreleaseVersion=${NEXT_REL_VERSION}" ) ; fi
+          if [ -n "${NEXT_DEV_VERSION}" ] ; then mvnArgsArr+=( "-DdevelopmentVersion=${NEXT_DEV_VERSION}" ) ; fi
           echo "" # mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
           mvn "${mvnArgsArr[@]}" release:prepare ${MVN_PERFORM_GOALS}
 

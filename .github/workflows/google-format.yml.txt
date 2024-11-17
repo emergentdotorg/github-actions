@@ -11,5 +11,5 @@ on:
 
 jobs:
   call-workflow:
-    uses: ./github-actions/.github/workflows/reusable-google-format.yml
+    uses: emergentdotorg/github-actions/.github/workflows/reusable-google-format.yml@main
     secrets: inherit

@@ -29,7 +29,7 @@ on:
         required: false
         default: true
       tag-prefix:
-        description: 'Prefix for the version when creating tag'
+        description: 'Tag version prefix'
         type: string
         required: false
         default: ''

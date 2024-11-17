@@ -83,13 +83,13 @@ jobs:
           version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Set Release Perform Goals
+      - name: Set Perform Goals
         id: set-perform-goals
         if: ${{ ! inputs.dry-run }}
         shell: bash
         # language="shell script"
         run: |
-          echo "goals=release:perform" >> $GITHUB_OUTPUT
+          echo "goals=release:perform" >> $GITHUB_OUTPUT          
 
       - name: Perform Maven Release
         shell: bash

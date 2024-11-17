@@ -6,42 +6,71 @@ on:
       - main
     inputs:
       default-bump:
-        description: 'Type of version change'
+        description: 'Version change type'
         type: choice
-        required: true
+        required: false
+        default: patch
         options:
           - major
           - minor
           - patch
-      custom-tag:
-        description: 'Custom tag name to apply'
-        type: string
-        required: false
+      # custom-tag:
+      #   description: 'Override tag name'
+      #   type: string
+      #   required: false
       annotated-tag:
         description: 'Annotated tag (not lightweight)'
         type: boolean
         required: false
         default: false
+      create-release:
+        description: 'Create release for tag'
+        type: boolean
+        required: false
+        default: true
+      tag-prefix:
+        description: 'Prefix for the version when creating tag'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Bump version and push tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: ${{ inputs.default-bump }}
-          custom_tag: ${{ inputs.custom-tag }}
+          # custom_tag: ${{ inputs.custom-tag }}
           create_annotated_tag: ${{ inputs.annotated-tag }}
-          tag_prefix: ''
+          tag_prefix: ${{ inputs.tag-prefix }}
+
       - name: Create a GitHub release
+        id: release-version
+        if: ${{ inputs.create-release }}
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           body: ${{ steps.tag_version.outputs.changelog }}
 
+      - name: Move major version tag
+        id: move_major_tag
+        shell: bash
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_version }}
+        # language="shell script"
+        run: |
+          MAJOR="${VERSION%%.*}"
+          if [ -n "${MAJOR}" ] ; then          
+            git config --local user.name 'github-actions[bot]'
+            git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -fa "${MAJOR}" -m 'Update major version tag'
+            git push origin "${MAJOR}" --force
+          fi
 

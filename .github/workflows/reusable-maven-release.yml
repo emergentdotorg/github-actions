@@ -48,7 +48,7 @@ jobs:
             8
             ${{ inputs.java-version }}
           distribution: 'temurin'
-          settings-path: ${{ github.workspace }}
+          # settings-path: ${{ github.workspace }}
           server-id: ${{ inputs.deploy-server }}
           server-username: DEPLOY_USERNAME
           server-password: DEPLOY_PASSWORD
@@ -83,7 +83,6 @@ jobs:
           version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-
       - name: Set Release Perform Goals
         id: set-perform-goals
         if: ${{ ! inputs.dry-run }}
@@ -109,8 +108,7 @@ jobs:
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
           mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
           mvnArgsArr+=( "--no-transfer-progress" )
-          mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
-          echo "MVN_PERFORM_GOALS=${MVN_PERFORM_GOALS}"
+          echo "" # mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
           mvn "${mvnArgsArr[@]}" release:prepare ${MVN_PERFORM_GOALS}
 
       - name: Commit Maven Release

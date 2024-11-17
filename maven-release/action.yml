@@ -1,0 +1,118 @@
+name: 'Maven Release Action'
+description: 'Build and release a Maven project'
+inputs:
+  deploy-server:
+    description: 'The deployment server id'
+    required: false
+    default: 'central'
+  deploy-username:
+    description: 'The deployment server username'
+    required: true
+  deploy-password:
+    description: 'The deployment server password'
+    required: true
+  gpg-private-key:
+    description: 'The encoded gpg private key'
+    required: true
+  gpg-passphrase:
+    description: 'The gpg private key passphrase'
+    required: true
+  java-version:
+    description: 'The version of Java to build and release with'
+    required: true
+  next-release-version:
+    description: 'Next Release Version'
+    required: false
+    default: ''
+  next-snapshot-version:
+    description: 'Next Snapshot Version'
+    required: false
+    default: ''
+  dry-run:
+    description: "Perform a dry run release"
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # - name: 'Set up various JDKs'
+    #   uses: actions/setup-java@v4
+    #   with:
+    #     java-version: |
+    #       17
+    #       11
+    #       8
+    #     distribution: 'temurin'
+
+    - name: 'Set up JDK'
+      uses: actions/setup-java@v4
+      with:
+        settings-path: ${{ github.workspace }}
+        java-version: ${{ inputs.java-version }}
+        distribution: 'temurin'
+        server-id: ${{ inputs.deploy-server }}
+        server-username: DEPLOY_USERNAME
+        server-password: DEPLOY_PASSWORD
+        gpg-passphrase: GPG_PASSPHRASE
+        gpg-private-key: ${{ inputs.gpg-private-key }}
+
+    - name: 'Verify Java environment variables'
+      shell: bash
+      run: |
+        java -version
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+
+    - name: 'Configure Git User'
+      shell: bash
+      # language="shell script"
+      run: |
+        git config --local user.name 'github-actions[bot]'
+        git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+    - uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: 3.9.9
+
+    - name: Copy Version Info
+      shell: bash
+      # language="shell script"
+      run: |
+        version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Perform Maven Release
+      if: ${{ ! inputs.dry-run }}
+      shell: bash
+      env:
+        DEPLOY_USERNAME: ${{ inputs.deploy-username }}
+        DEPLOY_PASSWORD: ${{ inputs.deploy-password }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        NEXT_REL_VERSION: ${{ inputs.next-release-version }}
+        NEXT_DEV_VERSION: ${{ inputs.next-snapshot-version }}
+      # language="shell script"
+      run: |
+        declare -a mvnArgsArr=( "-B" )
+        if [ -n "${NEXT_REL_VERSION}" ] ; then mvnArgsArr+=( "-DreleaseVersion=${NEXT_REL_VERSION}" ) ; fi
+        if [ -n "${NEXT_DEV_VERSION}" ] ; then mvnArgsArr+=( "-DdevelopmentVersion=${NEXT_DEV_VERSION}" ) ; fi
+        mvnArgsArr+=( "-DpushChanges=false" )
+        mvnArgsArr+=( "-DlocalCheckout=true" )
+        mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
+        mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
+        mvnArgsArr+=( "--no-transfer-progress" )
+        mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
+        mvn "${mvnArgsArr[@]}" release:prepare release:perform
+
+    - name: Commit Maven Release
+      if: ${{ ! inputs.dry-run && success() }}
+      shell: bash
+      # language="shell script"
+      run: git push --follow-tags --atomic

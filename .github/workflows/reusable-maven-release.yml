@@ -5,13 +5,18 @@ on:
     inputs:
       java-version:
         description: 'JDK version to build with'
+        type: string
         required: true
       next-release-version:
         description: 'Next Release Version'
+        type: string
         required: false
+        default: ''
       next-snapshot-version:
         description: 'Next Snapshot Version'
+        type: string
         required: false
+        default: ''
 
 jobs:
   release:

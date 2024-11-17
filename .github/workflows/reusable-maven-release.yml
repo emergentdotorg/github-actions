@@ -5,10 +5,13 @@ on:
     inputs:
       java-version:
         description: 'JDK version to build with'
+        required: true
       next-release-version:
         description: 'Next Release Version'
+        required: false
       next-snapshot-version:
         description: 'Next Snapshot Version'
+        required: false
 
 jobs:
   release:

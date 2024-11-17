@@ -1,0 +1,28 @@
+name: Reusable Maven Release
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: 'JDK version to build with'
+      next-release-version:
+        description: 'Next Release Version'
+      next-snapshot-version:
+        description: 'Next Snapshot Version'
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Perform Maven Release
+        uses: ./github-actions/maven-release
+        with:
+          java-version: ${{ inputs.java-version }}
+          next-release-version: ${{ inputs.next-release-version }}
+          next-snapshot-version: ${{ inputs.next-snapshot-version }}
+          deploy-username: ${{ secrets.maven_central_actor }}
+          deploy-password: ${{ secrets.maven_central_token }}
+          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}

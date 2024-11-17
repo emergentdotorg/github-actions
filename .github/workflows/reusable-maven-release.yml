@@ -26,7 +26,7 @@ on:
         description: 'Skip actually committing or deploying'
         type: boolean
         required: false
-        default: false
+        default: true
 
 env:
   DEPLOY_USERNAME: ${{ secrets.maven_central_actor }}
@@ -42,9 +42,13 @@ jobs:
       - name: 'Set up JDK'
         uses: actions/setup-java@v4
         with:
-          settings-path: ${{ github.workspace }}
-          java-version: ${{ inputs.java-version }}
+          java-version: |
+            17
+            11
+            8
+            ${{ inputs.java-version }}
           distribution: 'temurin'
+          settings-path: ${{ github.workspace }}
           server-id: ${{ inputs.deploy-server }}
           server-username: DEPLOY_USERNAME
           server-password: DEPLOY_PASSWORD
@@ -72,6 +76,7 @@ jobs:
           maven-version: 3.9.9
 
       - name: Copy Version Info
+        id: copy-version-info
         shell: bash
         # language="shell script"
         run: |
@@ -79,12 +84,12 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Perform Maven Release
-        if: ${{ ! inputs.dry-run }}
         shell: bash
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
           NEXT_REL_VERSION: ${{ inputs.next-release-version }}
           NEXT_DEV_VERSION: ${{ inputs.next-snapshot-version }}
+          RELEASE_GOALS: ${{ inputs.dry-run && '' || 'release:perform' }}
         # language="shell script"
         run: |
           declare -a mvnArgsArr=( "-B" )
@@ -96,7 +101,8 @@ jobs:
           mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
           mvnArgsArr+=( "--no-transfer-progress" )
           mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
-          mvn "${mvnArgsArr[@]}" release:prepare release:perform
+          echo "RELEASE_GOALS=${RELEASE_GOALS}"
+          mvn "${mvnArgsArr[@]}" release:prepare ${RELEASE_GOALS}
 
       - name: Commit Maven Release
         if: ${{ ! inputs.dry-run && success() }}

@@ -125,9 +125,13 @@ jobs:
         run: |
           git config --local user.name 'github-actions[bot]'
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          
+          ALTREPODIR="${{ runner.temp }}/altrepo"
+          echo "ALTREPODIR=${ALTREPODIR}"
+          
           mvn -B \
             --no-transfer-progress \
             -DpushChanges=false \
             -DlocalCheckout=true \
-            -Darguments="--no-transfer-progress -DaltDeploymentRepository=dist::file://${GITHUB_WORKSPACE}/testrepo" \
+            -Darguments="--no-transfer-progress -DaltDeploymentRepository=dist::file://${ALTREPODIR}" \
             release:prepare release:perform

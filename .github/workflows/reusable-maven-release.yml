@@ -126,7 +126,8 @@ jobs:
           git config --local user.name 'github-actions[bot]'
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
           mvn -B \
+            --no-transfer-progress \
             -DpushChanges=false \
             -DlocalCheckout=true \
-            -Darguments="-DaltDeploymentRepository=dist::file://${GITHUB_WORKSPACE}/testrepo" \
+            -Darguments="--no-transfer-progress -DaltDeploymentRepository=dist::file://${GITHUB_WORKSPACE}/testrepo" \
             release:prepare release:perform

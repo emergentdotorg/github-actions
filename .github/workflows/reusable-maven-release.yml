@@ -124,32 +124,22 @@ jobs:
         # language="shell script"
         run: |
           git config --local user.name 'github-actions[bot]'
-          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          
-          LOCREPODIR="${{ runner.temp }}/localrepo"
+          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'          
+          LOCREPODIR="${{ runner.temp }}/locrepo"
           DISTREPODIR="${{ runner.temp }}/distrepo"
           mkdir -p "${DISTREPODIR}"
-          LOCREPOARG="-Dmaven.repo.local=${LOCREPODIR}"
-          DISTREPOARG="-DaltDeploymentRepository=dist::file://${DISTREPODIR}"
-
           declare -a argArgsArr=(  )
           argArgsArr+=( "--no-transfer-progress" )
-          argArgsArr+=( "${LOCREPOARG}" )
-          argArgsArr+=( "${DISTREPOARG}" )
-          
+          argArgsArr+=( "-Dmaven.repo.local=${LOCREPODIR}" )
+          argArgsArr+=( "-DaltDeploymentRepository=dist::file://${DISTREPODIR}" )
           declare -a mvnArgsArr=( "-B" )
-          mvnArgsArr+=( "--no-transfer-progress" )
+          mvnArgsArr+=( "-Darguments=${argArgsArr[*]}" )
           mvnArgsArr+=( "-DpushChanges=false" )
           mvnArgsArr+=( "-DlocalCheckout=true" )
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
           mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
-          mvnArgsArr+=( "${LOCREPOARG}" )
-          mvnArgsArr+=( "${DISTREPOARG}" )
-          mvnArgsArr+=( "-Darguments=${argArgsArr[*]}" )
-          
-          echo " INVOKING mvn with args:"
-          for i in "${mvnArgsArr[@]}" ; do
-            echo "  -> $i"
-          done
-          
-          mvn "${mvnArgsArr[@]}" release:prepare release:perform
+          # echo " INVOKING mvn with args:"
+          # for i in "${mvnArgsArr[@]}" ; do
+          #   echo "  -> $i"
+          # done          
+          mvn "${argArgsArr[@]}" "${mvnArgsArr[@]}" release:prepare release:perform

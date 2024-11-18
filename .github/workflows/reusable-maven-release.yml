@@ -127,11 +127,14 @@ jobs:
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
           
           ALTREPODIR="${{ runner.temp }}/altrepo"
-          echo "ALTREPODIR=${ALTREPODIR}"
-          
-          mvn -B \
-            --no-transfer-progress \
-            -DpushChanges=false \
-            -DlocalCheckout=true \
-            -Darguments="--no-transfer-progress -DaltDeploymentRepository=dist::file://${ALTREPODIR}" \
-            release:prepare release:perform
+          mkdir "${ALTREPODIR}"
+          ALTREPOARG="-DaltDeploymentRepository=dist::file://${ALTREPODIR}"
+
+          declare -a mvnArgsArr=( "-B" )
+          mvnArgsArr+=( "--no-transfer-progress" )
+          mvnArgsArr+=( "-DpushChanges=false" )
+          mvnArgsArr+=( "-DlocalCheckout=true" )
+          mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
+          mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
+          mvnArgsArr+=( "-Darguments=--no-transfer-progress ${ALTREPOARG}" )
+          mvn "${mvnArgsArr[@]}" release:prepare release:perform

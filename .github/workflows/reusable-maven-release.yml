@@ -145,7 +145,7 @@ jobs:
           mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
           mvnArgsArr+=( "${LOCREPOARG}" )
           mvnArgsArr+=( "${DISTREPOARG}" )
-          mvnArgsArr+=( "-Darguments=${argArgsArr[@]}" )
+          mvnArgsArr+=( "-Darguments=${argArgsArr[*]}" )
           
           echo " INVOKING mvn with args:"
           for i in "${mvnArgsArr[@]}" ; do

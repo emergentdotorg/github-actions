@@ -48,4 +48,4 @@ jobs:
         shell: bash
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
-        run: mvn -B --no-transfer-progress clean install -e
+        run: mvn -B --no-transfer-progress clean verify -e

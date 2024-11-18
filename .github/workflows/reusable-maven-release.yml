@@ -12,48 +12,24 @@ on:
         description: 'JDK version to build with'
         type: string
         required: true
-      deploy-server:
-        description: 'Deployment server id'
-        type: string
-        required: false
-        default: central
-      scm-comment-prefix:
-        description: 'SCM Comment Prefix'
-        type: string
-        required: false
-        default: '[GitHub] '
-      tag-name-format:
-        description: 'Tag Name Format'
-        type: string
-        required: false
-        default: '@{project.version}'
-      next-release-version:
-        description: 'Next Release Version'
-        type: string
-        required: false
-        default: ''
-      next-snapshot-version:
-        description: 'Next Snapshot Version'
-        type: string
-        required: false
-        default: ''
       dry-run:
         description: 'Skip actually committing or deploying'
         type: boolean
         required: false
-        default: false
+        default: true
 
-env:
-  DEPLOY_USERNAME: ${{ secrets.maven_central_actor }}
-  DEPLOY_PASSWORD: ${{ secrets.maven_central_token }}
-  GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
 
 jobs:
   release:
-    runs-on: ubuntu-20.04
+    if: ${{ ! inputs.dry-run }}
+    runs-on: ubuntu-latest
     # Map the job outputs to step outputs
     outputs:
       output1: ${{ steps.copy-version-info.outputs.version }}
+    env:
+      DEPLOY_USERNAME: ${{ secrets.maven_central_actor }}
+      DEPLOY_PASSWORD: ${{ secrets.maven_central_token }}
+      GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +43,7 @@ jobs:
             ${{ inputs.java-version }}
           distribution: 'temurin'
           # settings-path: ${{ github.workspace }}
-          server-id: ${{ inputs.deploy-server }}
+          server-id: central
           server-username: DEPLOY_USERNAME
           server-password: DEPLOY_PASSWORD
           gpg-passphrase: GPG_PASSPHRASE
@@ -101,23 +77,10 @@ jobs:
           version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: Set Perform Goals
-        id: set-perform-goals
-        if: ${{ ! inputs.dry-run }}
-        shell: bash
-        # language="shell script"
-        run: |
-          echo "goals=release:perform" >> $GITHUB_OUTPUT          
-
       - name: Perform Maven Release
         shell: bash
         env:
           GITHUB_WORKSPACE: ${{ github.workspace }}
-          SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}
-          TAG_NAME_FORMAT: ${{ inputs.tag-name-format }}
-          NEXT_REL_VERSION: ${{ inputs.next-release-version }}
-          NEXT_DEV_VERSION: ${{ inputs.next-snapshot-version }}
-          MVN_PERFORM_GOALS: ${{ steps.set-perform-goals.outputs.goals }}
         # language="shell script"
         run: |
           declare -a mvnArgsArr=( "-B" )
@@ -125,17 +88,45 @@ jobs:
           mvnArgsArr+=( "-DpushChanges=false" )
           mvnArgsArr+=( "-DlocalCheckout=true" )
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
+          mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
           mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
-          mvnArgsArr+=( "-DscmCommentPrefix=${SCM_COMMENT_PREFIX}" )
-          mvnArgsArr+=( "-DtagNameFormat=${TAG_NAME_FORMAT}" )
-          if [ -n "${NEXT_REL_VERSION}" ] ; then mvnArgsArr+=( "-DreleaseVersion=${NEXT_REL_VERSION}" ) ; fi
-          if [ -n "${NEXT_DEV_VERSION}" ] ; then mvnArgsArr+=( "-DdevelopmentVersion=${NEXT_DEV_VERSION}" ) ; fi
-          echo "" # mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
           mvnArgsArr+=( "-P" "emergent-release" )
-          mvn "${mvnArgsArr[@]}" release:prepare ${MVN_PERFORM_GOALS}
+          mvn "${mvnArgsArr[@]}" release:prepare release:perform
 
       - name: Commit Maven Release
-        if: ${{ ! inputs.dry-run && success() }}
+        if: ${{ success() }}
         shell: bash
         # language="shell script"
         run: git push --follow-tags --atomic
+
+  dryrun:
+    if: ${{ inputs.dry-run }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'Set up JDK'
+        uses: actions/setup-java@v4
+        with:
+          java-version: |
+            17
+            11
+            8
+            ${{ inputs.java-version }}
+          distribution: 'temurin'
+      - uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: 3.9.9
+      - name: Test Maven Release
+        id: set-perform-goals
+        shell: bash
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+        # language="shell script"
+        run: |
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mvn -B \
+            -DpushChanges=false \
+            -DlocalCheckout=true \
+            -Darguments="-DaltDeploymentRepository=dist::file://${GITHUB_WORKSPACE}/testrepo" \
+            release:prepare release:perform

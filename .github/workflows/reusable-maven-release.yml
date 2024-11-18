@@ -133,9 +133,9 @@ jobs:
           DISTREPOARG="-DaltDeploymentRepository=dist::file://${DISTREPODIR}"
 
           declare -a argArgsArr=(  )
-          mvnArgsArr+=( "--no-transfer-progress" )
-          mvnArgsArr+=( "${LOCREPOARG}" )
-          mvnArgsArr+=( "${DISTREPOARG}" )
+          argArgsArr+=( "--no-transfer-progress" )
+          argArgsArr+=( "${LOCREPOARG}" )
+          argArgsArr+=( "${DISTREPOARG}" )
           
           declare -a mvnArgsArr=( "-B" )
           mvnArgsArr+=( "--no-transfer-progress" )
@@ -144,4 +144,5 @@ jobs:
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
           mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
           mvnArgsArr+=( "-Darguments=${argArgsArr[@]}" )
+          echo INVOKING: mvn "${mvnArgsArr[@]}" release:prepare release:perform
           mvn "${mvnArgsArr[@]}" release:prepare release:perform

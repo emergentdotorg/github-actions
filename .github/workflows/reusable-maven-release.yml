@@ -131,6 +131,7 @@ jobs:
           if [ -n "${NEXT_REL_VERSION}" ] ; then mvnArgsArr+=( "-DreleaseVersion=${NEXT_REL_VERSION}" ) ; fi
           if [ -n "${NEXT_DEV_VERSION}" ] ; then mvnArgsArr+=( "-DdevelopmentVersion=${NEXT_DEV_VERSION}" ) ; fi
           echo "" # mvnArgsArr+=( "-s" "${GITHUB_WORKSPACE}/settings.xml" )
+          mvnArgsArr+=( "-P" "emergent-release" )
           mvn "${mvnArgsArr[@]}" release:prepare ${MVN_PERFORM_GOALS}
 
       - name: Commit Maven Release

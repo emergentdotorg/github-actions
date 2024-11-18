@@ -126,15 +126,22 @@ jobs:
           git config --local user.name 'github-actions[bot]'
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
           
-          ALTREPODIR="${{ runner.temp }}/altrepo"
-          mkdir "${ALTREPODIR}"
-          ALTREPOARG="-DaltDeploymentRepository=dist::file://${ALTREPODIR}"
+          LOCREPODIR="${{ runner.temp }}/localrepo"
+          DISTREPODIR="${{ runner.temp }}/distrepo"
+          mkdir -p "${DISTREPODIR}"
+          LOCREPOARG="-Dmaven.repo.local=${LOCREPODIR}"
+          DISTREPOARG="-DaltDeploymentRepository=dist::file://${DISTREPODIR}"
 
+          declare -a argArgsArr=(  )
+          mvnArgsArr+=( "--no-transfer-progress" )
+          mvnArgsArr+=( "${LOCREPOARG}" )
+          mvnArgsArr+=( "${DISTREPOARG}" )
+          
           declare -a mvnArgsArr=( "-B" )
           mvnArgsArr+=( "--no-transfer-progress" )
           mvnArgsArr+=( "-DpushChanges=false" )
           mvnArgsArr+=( "-DlocalCheckout=true" )
           mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
           mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
-          mvnArgsArr+=( "-Darguments=--no-transfer-progress ${ALTREPOARG}" )
+          mvnArgsArr+=( "-Darguments=${argArgsArr[@]}" )
           mvn "${mvnArgsArr[@]}" release:prepare release:perform

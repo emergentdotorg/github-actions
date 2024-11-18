@@ -147,7 +147,7 @@ jobs:
           mvnArgsArr+=( "${DISTREPOARG}" )
           mvnArgsArr+=( "-Darguments=${argArgsArr[@]}" )
           
-          INVOKING mvn with args:
+          echo " INVOKING mvn with args:"
           for i in "${mvnArgsArr[@]}" ; do
             echo "  -> $i"
           done

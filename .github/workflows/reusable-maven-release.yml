@@ -18,14 +18,12 @@ on:
         required: false
         default: true
 
-
 jobs:
   release:
-    if: ${{ ! inputs.dry-run }}
     runs-on: ubuntu-latest
     # Map the job outputs to step outputs
     outputs:
-      output1: ${{ steps.copy-version-info.outputs.version }}
+      version: ${{ steps.resolve_vars.outputs.version }}
     env:
       DEPLOY_USERNAME: ${{ secrets.maven_central_actor }}
       DEPLOY_PASSWORD: ${{ secrets.maven_central_token }}
@@ -41,8 +39,12 @@ jobs:
             11
             8
             ${{ inputs.java-version }}
+          mvn-toolchain-id: |
+            temurin_17
+            temurin_11
+            temurin_8
+            selected
           distribution: 'temurin'
-          # settings-path: ${{ github.workspace }}
           server-id: central
           server-username: DEPLOY_USERNAME
           server-password: DEPLOY_PASSWORD
@@ -62,84 +64,59 @@ jobs:
         shell: bash
         # language="shell script"
         run: |
-          git config --local user.name 'github-actions[bot]'
-          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
 
       - uses: stCarolas/setup-maven@v5
         with:
           maven-version: 3.9.9
 
-      - name: Copy Version Info
-        id: copy-version-info
+      - name: Resolve Vars
+        id: resolve_vars
         shell: bash
+        env:
+          MAVEN_PROFILES: emergent-release
         # language="shell script"
         run: |
-          version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
-          echo "version=$version" >> $GITHUB_OUTPUT
+          declare -a profiles_=( ${MAVEN_PROFILES} )
+          PROFILES=$(IFS=, ; echo "${profiles_[*]}")
+          VERSION="$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )"
+          VERSION="${VERSION%-SNAPSHOT}"
+          printf '%s\n' \
+            "version=${VERSION}" \
+            "profiles=${PROFILES}" \
+            >> $GITHUB_OUTPUT
 
       - name: Perform Maven Release
         shell: bash
         env:
+          DRY_RUN: ${{ inputs.dry-run }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
+          RELEASE_PROFILES: ${{ steps.resolve_vars.outputs.profiles }}
         # language="shell script"
         run: |
           declare -a mvnArgsArr=( "-B" )
-          mvnArgsArr+=( "--no-transfer-progress" )
+          mvnArgsArr+=( "-DdryRun=${DRY_RUN}" )
           mvnArgsArr+=( "-DpushChanges=false" )
           mvnArgsArr+=( "-DlocalCheckout=true" )
-          mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
+          mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] [no ci] " )
           mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
-          mvnArgsArr+=( "-Darguments=--no-transfer-progress" )
-          mvnArgsArr+=( "-P" "emergent-release" )
-          mvn "${mvnArgsArr[@]}" release:prepare release:perform
+          declare -a argsOpt_=( "--no-transfer-progress" )
+          mvnArgsArr+=( "${argsOpt_[@]}" )
+          mvnArgsArr+=( "-Darguments=${argsOpt_[*]}" )
+          if [ -n "${RELEASE_PROFILES}" ]; then
+            mvnArgsArr+=( "-P" "${RELEASE_PROFILES}" )
+            mvnArgsArr+=( "-DreleaseProfiles=${RELEASE_PROFILES}" )
+            mvnArgsArr+=( "-DpreparationProfiles=${RELEASE_PROFILES}" )
+          fi
+          declare -a mvnGoals_=( 'release:prepare' )
+          if [ "${DRY_RUN}" != "true" ]; then
+            mvnGoals_+=( "release:perform" )
+          fi
+          mvn "${mvnArgsArr[@]}" "${mvnGoals_[@]}"
 
       - name: Commit Maven Release
-        if: ${{ success() }}
+        if: ${{ ! inputs.dry-run && success() }}
         shell: bash
         # language="shell script"
         run: git push --follow-tags --atomic
-
-  dryrun:
-    if: ${{ inputs.dry-run }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: 'Set up JDK'
-        uses: actions/setup-java@v4
-        with:
-          java-version: |
-            17
-            11
-            8
-            ${{ inputs.java-version }}
-          distribution: 'temurin'
-      - uses: stCarolas/setup-maven@v5
-        with:
-          maven-version: 3.9.9
-      - name: Test Maven Release
-        id: set-perform-goals
-        shell: bash
-        env:
-          GITHUB_WORKSPACE: ${{ github.workspace }}
-        # language="shell script"
-        run: |
-          git config --local user.name 'github-actions[bot]'
-          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'          
-          LOCREPODIR="${{ runner.temp }}/locrepo"
-          DISTREPODIR="${{ runner.temp }}/distrepo"
-          mkdir -p "${DISTREPODIR}"
-          declare -a argArgsArr=(  )
-          argArgsArr+=( "--no-transfer-progress" )
-          argArgsArr+=( "-Dmaven.repo.local=${LOCREPODIR}" )
-          argArgsArr+=( "-DaltDeploymentRepository=dist::file://${DISTREPODIR}" )
-          declare -a mvnArgsArr=( "-B" )
-          mvnArgsArr+=( "-Darguments=${argArgsArr[*]}" )
-          mvnArgsArr+=( "-DpushChanges=false" )
-          mvnArgsArr+=( "-DlocalCheckout=true" )
-          mvnArgsArr+=( "-DscmCommentPrefix=[GitHub] " )
-          mvnArgsArr+=( "-DtagNameFormat=@{project.version}" )
-          # echo " INVOKING mvn with args:"
-          # for i in "${mvnArgsArr[@]}" ; do
-          #   echo "  -> $i"
-          # done          
-          mvn "${argArgsArr[@]}" "${mvnArgsArr[@]}" release:prepare release:perform

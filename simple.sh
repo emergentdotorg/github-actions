@@ -26,6 +26,14 @@ doRelease() {
     release:prepare release:perform "$@"
 }
 
+doPrepare() {
+  mvn -B \
+    -DpushChanges=false \
+    -DlocalCheckout=true \
+    -Darguments="-Dgpg.skip=true -DaltDeploymentRepository=dist::file:///tmp/repo/altrepo" \
+    release:prepare "$@"
+}
+
 doBrancb() {
   mvn -B \
     -DbranchName="$1" \
@@ -41,6 +49,7 @@ doVersion() {
     -DprocessAllModules=true \
     org.codehaus.mojo:versions-maven-plugin:2.18.0:set
 }
+
 cmd="$1" ; shift
 case "$cmd" in
   untag)
@@ -54,6 +63,9 @@ case "$cmd" in
     ;;
   release)
     doRelease "$@"
+    ;;
+  prepare)
+    doPrepare "$@"
     ;;
   branch)
     doRelease "$@"

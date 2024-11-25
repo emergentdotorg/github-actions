@@ -67,7 +67,7 @@ jobs:
         # language="shell script"
         run: |
           MAJOR="${VERSION%%.*}"
-          if [ -n "${MAJOR}" ] ; then          
+          if [ -n "${MAJOR}" ] ; then
             git config --local user.name 'github-actions[bot]'
             git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git tag -fa "${MAJOR}" -m 'Update major version tag'

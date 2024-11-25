@@ -1,4 +1,4 @@
-name: Bump version
+name: Tag and Release
 
 on:
   workflow_dispatch:
@@ -14,21 +14,26 @@ on:
           - major
           - minor
           - patch
-      annotated-tag:
-        description: 'Annotated tag (not lightweight)'
-        type: boolean
-        required: false
-        default: false
       create-release:
         description: 'Create release for tag'
         type: boolean
         required: false
-        default: true
+        default: false
+      dry-run:
+        description: 'Do not commit or tag anything.'
+        type: boolean
+        required: false
+        default: false
+      tag-annotated:
+        description: 'Annotated tag (not lightweight)'
+        type: boolean
+        required: false
+        default: false
       tag-prefix:
         description: 'Tag version prefix'
         type: string
         required: false
-        default: ''
+        default: 'v'
 
 jobs:
   build:

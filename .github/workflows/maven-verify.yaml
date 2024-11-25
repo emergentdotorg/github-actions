@@ -1,4 +1,4 @@
-name: Reusable Maven Tests
+name: Reusable Maven Verify
 
 on:
   workflow_call:

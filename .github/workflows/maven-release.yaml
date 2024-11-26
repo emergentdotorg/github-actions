@@ -88,9 +88,6 @@ jobs:
         # language="shell script"
         run: |
           declare -a mvnArgs_=( "-B" )
-          declare -a argsOpt_=( "--no-transfer-progress" )
-          mvnArgs_+=( "${argsOpt_[@]}" )
-          mvnArgs_+=( "-Darguments=${argsOpt_[*]}" )
           mvnArgs_+=( "-DpushChanges=false" )
           mvnArgs_+=( "-DlocalCheckout=true" )
           mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci] " )
@@ -107,9 +104,12 @@ jobs:
           else
             mvnGoals_+=( "release:perform" )
           fi
+          declare -a argsOpt_=( "--no-transfer-progress" )
           if [ -n "${ALTREPO}" ]; then
-            mvnArgs_+=( "-DaltDeploymentRepository=${ALTREPO}" )
+            argsOpt_+=( "-DaltDeploymentRepository=${ALTREPO}" )
           fi
+          mvnArgs_+=( "${argsOpt_[@]}" )
+          mvnArgs_+=( "-Darguments=${argsOpt_[*]}" )
           mvn "${mvnArgs_[@]}" "${mvnGoals_[@]}"
 
       - name: Commit Maven Release

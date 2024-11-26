@@ -38,13 +38,14 @@ jobs:
       GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
       # GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_private_key }}
       # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}
+      GH_TOKEN: ${{ secrets.emergentbot_deploy_token }}
       RELEASE_PROFILES: 'emergent-release'
     steps:
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ env.DEPLOY_PASSWORD }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Setup Java Env
         id: java-env
@@ -52,7 +53,7 @@ jobs:
         with:
           java-version: ${{ inputs.java-version }}
           maven-version: ${{ inputs.maven-version }}
-          gh-token: ${{ env.DEPLOY_PASSWORD }}
+          gh-token: ${{ env.GH_TOKEN }}
           server-id: ${{ inputs.server-id }}
           server-username: DEPLOY_USERNAME
           server-password: DEPLOY_PASSWORD

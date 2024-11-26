@@ -21,6 +21,11 @@ on:
         description: 'Maven dist mgmt server-id'
         type: string
         required: true
+      maven-push-changes:
+        description: 'Push commits as part of the maven release goals'
+        type: boolean
+        required: false
+        default: false
 
 
 jobs:
@@ -67,7 +72,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         # language="shell script"
         run: |
-          if [ "${DEPLOY_SERVER}" = "github" ]; then
+          if [ "${DEPLOY_HSERVER}" = "github" ]; then
             ALTREPO="github::https://maven.pkg.github.com/${GITHUB_REPOSITORY}"
           fi
           VERSION="$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )"
@@ -81,6 +86,7 @@ jobs:
         shell: bash
         env:
           DRY_RUN: ${{ inputs.dry-run }}
+          PUSH_CHANGES: ${{ inputs.maven-push-changes }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
           USER_SETTINGS_FILE: ${{ steps.java-env.outputs.user-settings }}
@@ -89,7 +95,7 @@ jobs:
         # language="shell script"
         run: |
           declare -a mvnArgs_=( "-B" )
-          mvnArgs_+=( "-DpushChanges=false" )
+          mvnArgs_+=( "-DpushChanges=${PUSH_CHANGES}" )
           mvnArgs_+=( "-DlocalCheckout=true" )
           mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci] " )
           mvnArgs_+=( "-DtagNameFormat=@{project.version}" )
@@ -114,7 +120,7 @@ jobs:
           mvn "${mvnArgs_[@]}" "${mvnGoals_[@]}"
 
       - name: Commit Maven Release
-        if: ${{ ! inputs.dry-run && success() }}
+        if: ${{ ! ( inputs.dry-run || inputs.maven-push-changes ) && success() }}
         shell: bash
         # language="shell script"
         run: git push --follow-tags --atomic

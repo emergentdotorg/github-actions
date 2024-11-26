@@ -71,6 +71,7 @@ runs:
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
+        cat .git/config
         printf '%s\n' \
           '/github-actions/' \
           >> ".git/info/exclude"

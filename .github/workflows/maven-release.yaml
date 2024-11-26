@@ -72,7 +72,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         # language="shell script"
         run: |
-          if [ "${DEPLOY_HSERVER}" = "github" ]; then
+          if [ "${DEPLOY_SERVER}" = "github" ]; then
             ALTREPO="github::https://maven.pkg.github.com/${GITHUB_REPOSITORY}"
           fi
           VERSION="$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )"

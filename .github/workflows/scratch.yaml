@@ -22,3 +22,24 @@ jobs:
           github-password-env: GITHUB_TOKEN
           gpg-passphrase-env: GPG_PASSPHRASE
           gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+
+      - name: 'Verify Java and Maven'
+        shell: bash
+        # language="shell script"
+        run: |
+          java -version
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+          echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+          echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+          mvn -version
+          catIfExists() {
+            if [ -f "$1" ]; then
+              cat "$1"
+            else
+              echo "WARNING: File $1 does not exist"
+            fi
+          }
+          catIfExists "$HOME/.m2/settings.xml"
+          catIfExists "$HOME/.m2/settings-global.xml"
+          catIfExists "$HOME/.m2/toolchains.xml"

@@ -41,6 +41,14 @@ inputs:
     description: 'Maven version'
     required: true
     default: '3.9.9'
+  scm-comment-prefix:
+    description: 'Maven release scmCommentPrefix'
+    required: false
+    default: '[GitHub] [no ci] '
+  tag-name-format:
+    description: 'Maven release tagNameFormat'
+    required: false
+    default: ''
   dry-run:
     description: "Perform a dry run release"
     required: false
@@ -216,6 +224,8 @@ runs:
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         PROFILES: ${{ steps.resolve_values.outputs.profiles }}
         DRY_RUN: ${{ inputs.dry-run }}
+        SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}
+        TAG_NAME_FORMAT: ${{ inputs.tag-name-format }}
         USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
         USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
         GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
@@ -225,7 +235,12 @@ runs:
         _args+=( "-B" "-e" )
         _args+=( "-DlocalCheckout=true" )
         _args+=( "-DpushChanges=false" )
-        _args+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
+        if [ -n "${SCM_COMMENT_PREFIX}" ]; then
+          _args+=( "-DscmCommentPrefix=${SCM_COMMENT_PREFIX}" )
+        fi
+        if [ -n "${TAG_NAME_FORMAT}" ]; then
+          _args+=( "-DtagNameFormat=${TAG_NAME_FORMAT}" )
+        fi
         if [ -n "${PROFILES}" ]; then 
           _args+=( "-P=${PROFILES}" )
         fi

@@ -57,7 +57,7 @@ runs:
         
     - name: Setup Java Env
       id: setup_java
-      uses: emergentdotorg/github-actions/setup-java-env@main
+      uses: emergentdotorg/github-actions/setup-java-env@v2
       with:
         deploy-server: ${{ inputs.deploy-server }}
         deploy-username-env: 'DEPLOY_ACTOR'

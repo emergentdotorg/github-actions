@@ -2,6 +2,15 @@ name: Scratch
 
 on:
   workflow_dispatch:
+    inputs:
+      op:
+        description: 'Operation to perform'
+        type: choice
+        required: false
+        default: setup-java
+        options:
+          - dump-context
+          - setup-java
 
 jobs:
   scratch:
@@ -11,7 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Dump Context Java
+        if: ${{ inputs.op == 'dump-context' }}
+        id: dump_context
+        uses: emergentdotorg/github-actions/dump-context@main
+
       - name: Setup Java
+        if: ${{ inputs.op == 'setup-java' }}
         id: setup_java
         uses: emergentdotorg/github-actions/setup-java-env@main
         with:
@@ -24,6 +39,7 @@ jobs:
           gpg-private-key: ${{ secrets.maven_gpg_private_key }}
 
       - name: 'Verify Java and Maven'
+        if: ${{ inputs.op == 'setup-java' }}
         shell: bash
         # language="shell script"
         run: |

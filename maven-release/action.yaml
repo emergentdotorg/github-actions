@@ -2,7 +2,7 @@ name: 'Maven Release Action'
 description: 'Build and release a Maven project'
 outputs:
   version:
-    description: ''
+    description: 'Built version'
     value: ${{ steps.resolve_values.outputs.version }}
 inputs:
   deploy-server:
@@ -55,18 +55,18 @@ runs:
         fetch-depth: 0
         token: ${{ inputs.github-token }}
         
-    - name: Setup Java Env
-      id: setup_java
-      uses: emergentdotorg/github-actions/setup-java-env@v2
-      with:
-        deploy-server: ${{ inputs.deploy-server }}
-        deploy-username-env: 'DEPLOY_ACTOR'
-        deploy-password-env: 'DEPLOY_TOKEN'
-        github-username-env: 'GITHUB_ACTOR'
-        github-password-env: 'GITHUB_TOKEN'
-        gpg-passphrase-env: 'GPG_PASSPHRASE'
-        gpg-private-key: ${{ inputs.gpg-private-key }}
-        maven-version:  ${{ inputs.maven-version }}
+    #- name: Setup Java Env
+    #  id: setup_java
+    #  uses: emergentdotorg/github-actions/setup-java-env@v2
+    #  with:
+    #    deploy-server: ${{ inputs.deploy-server }}
+    #    deploy-username-env: 'DEPLOY_ACTOR'
+    #    deploy-password-env: 'DEPLOY_TOKEN'
+    #    github-username-env: 'GITHUB_ACTOR'
+    #    github-password-env: 'GITHUB_TOKEN'
+    #    gpg-passphrase-env: 'GPG_PASSPHRASE'
+    #    gpg-private-key: ${{ inputs.gpg-private-key }}
+    #    maven-version:  ${{ inputs.maven-version }}
 
     - name: Setup Git Config
       shell: bash
@@ -81,6 +81,85 @@ runs:
           '/settings-global.xml' \
           '/toolchains.xml' \
           >> ".git/info/exclude"
+
+    - name: Install Maven
+      uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: ${{ inputs.maven-version }}
+
+    - name: Resolve Paths
+      id: resolve_paths
+      shell: bash
+      env:
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        SETTINGS_DIR: ${{ inputs.settings-dir != '' && inputs.settings-dir || '~/.m2' }}
+      # language="shell script"
+      run: |
+        RESOLVED_DIR="${SETTINGS_DIR/#~/$HOME}"
+        mkdir -p "${RESOLVED_DIR}"
+        printf '%s\n' \
+          "settings-path=${RESOLVED_DIR}" \
+          "user-settings=${RESOLVED_DIR}/settings.xml" \
+          "user-toolchains=${RESOLVED_DIR}/toolchains.xml" \
+          "global-settings=${RESOLVED_DIR}/settings-global.xml" \
+          >> $GITHUB_OUTPUT
+
+    - name: 'Setup Java'
+      uses: actions/setup-java@v4
+      with:
+        settings-path: ${{ steps.resolve_paths.outputs.settings-path }}
+        server-id: ${{ inputs.deploy-server }}
+        server-username: 'DEPLOY_ACTOR'
+        server-password: 'DEPLOY_TOKEN'
+        gpg-passphrase: 'GPG_PASSPHRASE'
+        gpg-private-key: ${{ inputs.gpg-private-key }}
+        distribution: 'temurin'
+        java-version: |
+          8
+          11
+          17
+        mvn-toolchain-id: |
+          temurin_8
+          temurin_11
+          temurin_17
+
+    - uses: s4u/maven-settings-action@v3.1.0
+      if: ${{ inputs.deploy-server != 'github' && success() }}
+      with:
+        path: ${{ steps.resolve_paths.outputs.global-settings }}
+        githubServer: 'false'
+        servers: >
+          [{
+            "id": "github",
+            "username": "${env.GITHUB_ACTOR}",
+            "password": "${env.GITHUB_TOKEN}"
+          }]
+
+    - name: 'Verify Java and Maven'
+      shell: bash
+      env:
+        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
+      # language="shell script"
+      run: |
+        java -version
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+        mvn -version
+        catIfExists() {
+          if [ -f "$1" ]; then
+            cat "$1"
+          else
+            echo "WARNING: File $1 does not exist"
+          fi
+        }
+        catIfExists "${USER_SETTINGS}"
+        catIfExists "${GLOBAL_SETTINGS}"
+        catIfExists "${USER_TOOLCHAINS}"
+        catIfExists ${{ github.workspace }}/.git/config
 
     #- name: Resolve Actions Ref
     #  id: resolve_action_ref
@@ -103,71 +182,13 @@ runs:
     #    sparse-checkout: |
     #      maven-release/
 
-    #- name: Install Maven
-    #  uses: stCarolas/setup-maven@v5
-    #  with:
-    #    maven-version: ${{ inputs.maven-version }}
-    #
-    #- name: 'Setup Java'
-    #  uses: actions/setup-java@v4
-    #  env:
-    #    DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
-    #    DEPLOY_TOKEN: ${{ inputs.deploy-token }}
-    #    GITHUB_ACTOR: ${{ inputs.github-actor }}
-    #    GITHUB_TOKEN: ${{ inputs.github-token }}
-    #    GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
-    #  with:
-    #    settings-path: '~/.m2'
-    #    server-id: ${{ inputs.deploy-server }}
-    #    server-username: 'DIST_USERNAME'
-    #    server-password: 'DIST_PASSWORD'
-    #    gpg-passphrase: 'GPG_PASSPHRASE'
-    #    gpg-private-key: ${{ inputs.gpg-private-key }}
-    #    distribution: 'temurin'
-    #    java-version: |
-    #      8
-    #      11
-    #      17
-    #    mvn-toolchain-id: |
-    #      temurin_8
-    #      temurin_11
-    #      temurin_17
-    #
-    #- uses: s4u/maven-settings-action@v3.1.0
-    #  with:
-    #    path: '~/.m2/settings-global.xml'
-    #    githubServer: 'true'
-
-    - name: 'Verify Java and Maven'
-      shell: bash
-      env:
-        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
-      # language="shell script"
-      run: |
-        java -version
-        echo "JAVA_HOME: $JAVA_HOME"
-        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
-        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
-        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
-        mvn -version
-        catIfExists() {
-          if [ -f "$1" ]; then
-            cat "$1"
-          fi
-        }
-        catIfExists "${USER_SETTINGS}"
-        catIfExists "${GLOBAL_SETTINGS}"
-        catIfExists "${USER_TOOLCHAINS}"
-
     - name: Resolve Values
       id: resolve_values
       shell: bash
       env:
-        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
+        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
         ACTIVATE_PROFILES: ${{ inputs.activate-profiles }}
       # language="shell script"
       run: |
@@ -195,9 +216,9 @@ runs:
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         PROFILES: ${{ steps.resolve_values.outputs.profiles }}
         DRY_RUN: ${{ inputs.dry-run }}
-        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
+        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
       # language="shell script"
       run: |
         declare -a _args=( )
@@ -205,11 +226,9 @@ runs:
         _args+=( "-DlocalCheckout=true" )
         _args+=( "-DpushChanges=false" )
         _args+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        #
         if [ -n "${PROFILES}" ]; then 
           _args+=( "-P=${PROFILES}" )
         fi
-        #
         declare -a _argumentsOpt=( )
         _argumentsOpt+=( "-ntp" )
         if [ -f "${USER_SETTINGS}" ]; then
@@ -218,14 +237,12 @@ runs:
         if [ -f "${GLOBAL_SETTINGS}" ]; then
           _argumentsOpt+=( -gs "${GLOBAL_SETTINGS}" )
         fi
-        _args+=( "${argumentsOptionArr[@]}" )
-        _args+=( "-Darguments=${argumentsOptionArr[*]}" )
-        #
+        _args+=( "${_argumentsOpt[@]}" )
+        _args+=( "-Darguments=${_argumentsOpt[*]}" )
         declare -a _goals=( "release:prepare" )
         if [ "${DRY_RUN}" != "true" ]; then 
           _goals+=( "release:perform" ) ; 
         fi
-        #
         mvn "${_args[@]}" "${_goals[@]}"
 
     - name: Commit Maven Release

@@ -56,6 +56,7 @@ runs:
         token: ${{ inputs.github-token }}
         
     - name: Setup Java Env
+      id: setup_java
       uses: emergentdotorg/github-actions/setup-java-env@main
       with:
         deploy-server: ${{ inputs.deploy-server }}
@@ -66,7 +67,6 @@ runs:
         gpg-passphrase-env: 'GPG_PASSPHRASE'
         gpg-private-key: ${{ inputs.gpg-private-key }}
         maven-version:  ${{ inputs.maven-version }}
-
 
     - name: Setup Git Config
       shell: bash
@@ -140,6 +140,10 @@ runs:
 
     - name: 'Verify Java and Maven'
       shell: bash
+      env:
+        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
       # language="shell script"
       run: |
         java -version
@@ -153,14 +157,17 @@ runs:
             cat "$1"
           fi
         }
-        catIfExists $HOME/.m2/settings.xml
-        catIfExists $HOME/.m2/settings-global.xml
-        catIfExists $HOME/.m2/toolchains.xml
+        catIfExists "${USER_SETTINGS}"
+        catIfExists "${GLOBAL_SETTINGS}"
+        catIfExists "${USER_TOOLCHAINS}"
 
     - name: Resolve Values
       id: resolve_values
       shell: bash
       env:
+        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
         ACTIVATE_PROFILES: ${{ inputs.activate-profiles }}
       # language="shell script"
       run: |
@@ -169,7 +176,12 @@ runs:
         echo "profiles=${PROFILES}" >> $GITHUB_OUTPUT
         ::
         declare -a mvnArgs=( )
-        mvnArgs+=( -gs "${HOME}/.m2/settings-global.xml" )
+        if [ -f "${USER_SETTINGS}" ]; then
+          mvnArgs+=( -s "${USER_SETTINGS}" )
+        fi
+        if [ -f "${GLOBAL_SETTINGS}" ]; then
+          mvnArgs+=( -gs "${GLOBAL_SETTINGS}" )
+        fi
         version="$(mvn ${mvnArgs[*]} help:evaluate -q -DforceStdout -Dexpression=project.version)"
         echo "version=${version%-SNAPSHOT}" >> $GITHUB_OUTPUT
 
@@ -183,6 +195,9 @@ runs:
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         PROFILES: ${{ steps.resolve_values.outputs.profiles }}
         DRY_RUN: ${{ inputs.dry-run }}
+        USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
       # language="shell script"
       run: |
         declare -a _args=( )
@@ -197,7 +212,12 @@ runs:
         ::
         declare -a _argumentsOpt=( )
         _argumentsOpt+=( "-ntp" )
-        _argumentsOpt+=( -gs "${HOME}/.m2/settings-global.xml" )
+        if [ -f "${USER_SETTINGS}" ]; then
+          _argumentsOpt+=( -s "${USER_SETTINGS}" )
+        fi
+        if [ -f "${GLOBAL_SETTINGS}" ]; then
+          _argumentsOpt+=( -gs "${GLOBAL_SETTINGS}" )
+        fi
         _args+=( "${argumentsOptionArr[@]}" )
         _args+=( "-Darguments=${argumentsOptionArr[*]}" )
         ::

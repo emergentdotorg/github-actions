@@ -1,5 +1,15 @@
 name: 'Java Maven Environment Setup'
 description: 'Setup Java Environment'
+outputs:
+  user-settings:
+    description: 'Path to user settings file'
+    value: ${{ steps.resolve_paths.outputs.settings-path }}/settings.xml
+  user-toolchains:
+    description: 'Path to user toolchains file'
+    value: ${{ steps.resolve_paths.outputs.settings-path }}/toolchains.xml
+  global-settings:
+    description: 'Path to global settings file'
+    value: ${{ steps.resolve_paths.outputs.settings-path }}/settings-global.xml
 inputs:
   deploy-server:
     description: >
@@ -96,7 +106,7 @@ runs:
           "settings-path=${RESOLVED_DIR}" \
           "user-settings=${RESOLVED_DIR}/settings.xml" \
           "user-toolchains=${RESOLVED_DIR}/toolchains.xml" \
-          "global-settings=${GITHUB_WORKSPACE}/github-actions/setup-java-env/settings.xml" \
+          "global-settings=${RESOLVED_DIR}/settings-global.xml" \
           >> $GITHUB_OUTPUT
 
     - name: 'Setup Java'
@@ -121,14 +131,10 @@ runs:
     - uses: s4u/maven-settings-action@v3.1.0
       if: ${{ inputs.deploy-server != 'github' && success() }}
       with:
-        path: ${{ steps.resolve_paths.outputs.settings-path }}/settings-global.xml
+        path: ${{ steps.resolve_paths.outputs.global-settings }}
         githubServer: 'false'
         servers: >
           [{
-            "id": "${{ inputs.deploy-server }}",
-            "username": "${env.${{ inputs.deploy-username-env }}}",
-            "password": "${env.${{ inputs.deploy-password-env }}}"
-          },{
             "id": "github",
             "username": "${env.${{ inputs.github-username-env }}}",
             "password": "${env.${{ inputs.github-password-env }}}"
@@ -136,6 +142,10 @@ runs:
 
     - name: 'Verify Java and Maven'
       shell: bash
+      env:
+        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
+        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
+        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
       # language="shell script"
       run: |
         java -version
@@ -151,6 +161,7 @@ runs:
             echo "WARNING: File $1 does not exist"
           fi
         }
-        catIfExists "$HOME/.m2/settings.xml"
-        catIfExists "$HOME/.m2/settings-global.xml"
-        catIfExists "$HOME/.m2/toolchains.xml"
+        catIfExists "${USER_SETTINGS}"
+        catIfExists "${GLOBAL_SETTINGS}"
+        catIfExists "${USER_TOOLCHAINS}"
+        catIfExists ${{ github.workspace }}/.git/config

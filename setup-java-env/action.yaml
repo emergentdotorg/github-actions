@@ -48,6 +48,10 @@ inputs:
     description: 'Maven version'
     required: true
     default: '3.9.9'
+  settings-dir:
+    description: 'Directory which will hold the generated settings.xml'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -78,9 +82,27 @@ runs:
       with:
         maven-version: ${{ inputs.maven-version }}
 
+    - name: Resolve Paths
+      id: resolve_paths
+      shell: bash
+      env:
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+        SETTINGS_DIR: ${{ inputs.settings-dir != '' && inputs.settings-dir || '~/.m2' }}
+      # language="shell script"
+      run: |
+        RESOLVED_DIR="${SETTINGS_DIR/#~/$HOME}"
+        mkdir -p "${RESOLVED_DIR}"
+        printf '%s\n' \
+          "settings-path=${RESOLVED_DIR}" \
+          "user-settings=${RESOLVED_DIR}/settings.xml" \
+          "user-toolchains=${RESOLVED_DIR}/toolchains.xml" \
+          "global-settings=${GITHUB_WORKSPACE}/github-actions/setup-java-env/settings.xml" \
+          >> $GITHUB_OUTPUT
+
     - name: 'Setup Java'
       uses: actions/setup-java@v4
       with:
+        settings-path: ${{ steps.resolve_paths.outputs.settings-path }}
         server-id: ${{ inputs.deploy-server }}
         server-username: ${{ inputs.deploy-username-env }}
         server-password: ${{ inputs.deploy-password-env }}
@@ -99,13 +121,20 @@ runs:
     - uses: s4u/maven-settings-action@v3.1.0
       if: ${{ inputs.deploy-server != 'github' && success() }}
       with:
-        path: ${{ github.workspace }}/settings-global.xml'
+        path: ${{ steps.resolve_paths.outputs.settings-path }}/settings-global.xml'
         githubServer: 'false'
         servers: >
           [{
+            "id": "${{ inputs.deploy-server }}",
+            "username": "${env.${{ inputs.deploy-username-env }}}",
+            "password": "${env.${{ inputs.deploy-password-env }}}"
+          },{
             "id": "github",
             "username": "${env.${{ inputs.github-username-env }}}",
             "password": "${env.${{ inputs.github-password-env }}}"
+          },{
+            "id": "gpg.passphrase",
+            "passphrase": "${env.${{ inputs.gpg-passphrase-env }}}"
           }]
 
     - name: 'Verify Java and Maven'
@@ -126,5 +155,5 @@ runs:
           fi
         }
         catIfExists "$HOME/.m2/settings.xml"
-        catIfExists "${{ github.workspace }}/settings-global.xml"
+        catIfExists "$HOME/.m2/settings-global.xml"
         catIfExists "$HOME/.m2/toolchains.xml"

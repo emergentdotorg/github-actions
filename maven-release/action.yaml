@@ -119,7 +119,7 @@ runs:
         server-id: ${{ inputs.deploy-server }}
         server-username: 'DEPLOY_ACTOR'
         server-password: 'DEPLOY_TOKEN'
-        gpg-passphrase: 'GPG_PASSPHRASE'
+        gpg-passphrase: 'MAVEN_GPG_PASSPHRASE'
         gpg-private-key: ${{ inputs.gpg-private-key }}
         distribution: 'temurin'
         java-version: |
@@ -221,7 +221,7 @@ runs:
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
         GITHUB_ACTOR: ${{ inputs.github-actor }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         PROFILES: ${{ steps.resolve_values.outputs.profiles }}
         DRY_RUN: ${{ inputs.dry-run }}
         SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}

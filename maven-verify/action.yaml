@@ -12,7 +12,7 @@ inputs:
   activate-profiles:
     description: "Maven profiles to activate"
     required: true
-    default: 'emergent-release'
+    default: ''
   maven-threads:
     description: 'Number of threads used by maven'
     required: true

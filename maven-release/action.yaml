@@ -36,7 +36,7 @@ inputs:
   activate-profiles:
     description: 'Maven profiles to activate, comma-delimited'
     required: true
-    default: 'release'
+    default: ''
   maven-version:
     description: 'Maven version'
     required: true
@@ -174,7 +174,7 @@ runs:
         declare -a profilesArr=( ${ACTIVATE_PROFILES} )
         PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
         echo "profiles=${PROFILES}" >> $GITHUB_OUTPUT
-        ::
+        #
         declare -a mvnArgs=( )
         if [ -f "${USER_SETTINGS}" ]; then
           mvnArgs+=( -s "${USER_SETTINGS}" )
@@ -205,11 +205,11 @@ runs:
         _args+=( "-DlocalCheckout=true" )
         _args+=( "-DpushChanges=false" )
         _args+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        ::
+        #
         if [ -n "${PROFILES}" ]; then 
           _args+=( "-P=${PROFILES}" )
         fi
-        ::
+        #
         declare -a _argumentsOpt=( )
         _argumentsOpt+=( "-ntp" )
         if [ -f "${USER_SETTINGS}" ]; then
@@ -220,12 +220,12 @@ runs:
         fi
         _args+=( "${argumentsOptionArr[@]}" )
         _args+=( "-Darguments=${argumentsOptionArr[*]}" )
-        ::
+        #
         declare -a _goals=( "release:prepare" )
         if [ "${DRY_RUN}" != "true" ]; then 
           _goals+=( "release:perform" ) ; 
         fi
-        ::
+        #
         mvn "${_args[@]}" "${_goals[@]}"
 
     - name: Commit Maven Release

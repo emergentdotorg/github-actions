@@ -81,7 +81,6 @@ runs:
     - name: 'Setup Java'
       uses: actions/setup-java@v4
       with:
-        settings-path: '~/.m2'
         server-id: ${{ inputs.deploy-server }}
         server-username: ${{ inputs.deploy-username-env }}
         server-password: ${{ inputs.deploy-password-env }}
@@ -100,7 +99,7 @@ runs:
     - uses: s4u/maven-settings-action@v3.1.0
       if: ${{ inputs.deploy-server != 'github' && success() }}
       with:
-        path: '~/.m2/settings-global.xml'
+        path: ${{ env.HOME }}/.m2/settings-global.xml
         githubServer: 'false'
         servers: >
           [{

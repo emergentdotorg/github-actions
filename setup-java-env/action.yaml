@@ -99,7 +99,7 @@ runs:
     - uses: s4u/maven-settings-action@v3.1.0
       if: ${{ inputs.deploy-server != 'github' && success() }}
       with:
-        path: '$HOME/.m2/settings-global.xml'
+        path: ${{ github.workspace }}/settings-global.xml'
         githubServer: 'false'
         servers: >
           [{
@@ -126,5 +126,5 @@ runs:
           fi
         }
         catIfExists "$HOME/.m2/settings.xml"
-        catIfExists "$HOME/.m2/settings-global.xml"
+        catIfExists "${{ github.workspace }}/settings-global.xml"
         catIfExists "$HOME/.m2/toolchains.xml"

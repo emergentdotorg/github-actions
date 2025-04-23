@@ -57,5 +57,5 @@ jobs:
             fi
           }
           catIfExists "$HOME/.m2/settings.xml"
-          catIfExists "$HOME/.m2/settings-global.xml"
+          catIfExists "${{ github.workspace }}/settings-global.xml"
           catIfExists "$HOME/.m2/toolchains.xml"

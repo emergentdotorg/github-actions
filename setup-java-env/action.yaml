@@ -134,7 +134,7 @@ runs:
             "password": "${env.${{ inputs.github-password-env }}}"
           },{
             "id": "gpg.passphrase",
-            "passphrase": "${env.${{ inputs.gpg-passphrase-env }}}"
+            "password": "${env.${{ inputs.gpg-passphrase-env }}}"
           }]
 
     - name: 'Verify Java and Maven'

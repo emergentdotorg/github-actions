@@ -121,7 +121,7 @@ runs:
     - uses: s4u/maven-settings-action@v3.1.0
       if: ${{ inputs.deploy-server != 'github' && success() }}
       with:
-        path: ${{ steps.resolve_paths.outputs.settings-path }}/settings-global.xml'
+        path: ${{ steps.resolve_paths.outputs.settings-path }}/settings-global.xml
         githubServer: 'false'
         servers: >
           [{

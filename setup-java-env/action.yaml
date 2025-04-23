@@ -132,9 +132,6 @@ runs:
             "id": "github",
             "username": "${env.${{ inputs.github-username-env }}}",
             "password": "${env.${{ inputs.github-password-env }}}"
-          },{
-            "id": "gpg.passphrase",
-            "password": "${env.${{ inputs.gpg-passphrase-env }}}"
           }]
 
     - name: 'Verify Java and Maven'

@@ -1,60 +1,53 @@
-name: 'Setup Java Environment'
+name: 'Java Maven Environment Setup'
 description: 'Setup Java Environment'
-outputs:
-  global-settings:
-    description: 'Maven global settings.xml file location.'
-    value: ${{ steps.resolve_paths.outputs.global-settings }}
-  user-settings:
-    description: 'Maven user settings.xml file location.'
-    value: ${{ steps.resolve_paths.outputs.user-settings }}
-  user-toolchains:
-    description: 'Maven user toolchains.xml file location.'
-    value: ${{ steps.resolve_paths.outputs.user-toolchains }}
-  settings-path:
-    description: 'Resolved path of the input parameter.'
-    value: ${{ steps.resolve_paths.outputs.settings-path }}
-
 inputs:
-  java-version:
-    description: "Java version to set up. Examples: 8, 11, 17"
-    required: false
-    default: '8'
-  maven-version:
-    description: 'Maven version to set up. Examples: 3.6.3, 3.9.9'
-    required: false
-    default: '3.6.3'
-  server-id:
-    description: 'ID of the distributionManagement repository in the pom.xml file.'
+  deploy-server:
+    description: >
+      ID of the distributionManagement repository in the pom.xml file. Default is `github`
     required: false
     default: 'github'
-  server-username:
-    description: 'Environment variable name for the username for authentication to the Apache Maven repository.'
+  deploy-username-env:
+    description: >
+      Environment variable name for the username for authentication
+      to the Apache Maven repository. Default is $GITHUB_ACTOR'
     required: false
     default: 'GITHUB_ACTOR'
-  server-password:
-    description: 'Environment variable name for password or token for authentication to the Apache Maven repository.'
+  deploy-password-env:
+    description: >
+      Environment variable name for password or token for
+      authentication to the Apache Maven repository. Default is $GITHUB_TOKEN'
     required: false
     default: 'GITHUB_TOKEN'
-  gh-token:
-    description: 'GitHub personal access token (PAT) used to fetch the repository.'
+  github-username-env:
+    description: >
+      Environment variable name for the username for authentication
+      to the source repository. Default is $GITHUB_ACTOR'
     required: false
-    default: '${{ github.token }}'
+    default: 'GITHUB_ACTOR'
+  github-password-env:
+    description: >
+      Environment variable name for password or token for
+      authentication to the source repository. Default is $GITHUB_TOKEN'
+    required: false
+    default: 'GITHUB_TOKEN'
+  gpg-passphrase-env:
+    description: >
+      Environment variable name for the GPG private key passphrase. 
+      Default is $GPG_PASSPHRASE.
+    required: false
+    default: 'GPG_PASSPHRASE'
   gpg-private-key:
     description: 'GPG private key to import. Default is empty string.'
     required: false
     default: ''
-  gpg-passphrase:
-    description: 'Environment variable name for the GPG private key passphrase. Default is $GPG_PASSPHRASE.'
-    required: false
-    default: 'GPG_PASSPHRASE'
-  settings-path:
-    description: 'Path to where the Maven settings.xml file will be written. Default is ~/.m2.'
-    required: false
-    default: ''
-  debug:
-    description: 'Debug logging'
-    required: false
-    default: ''
+  github-token:
+    description: 'GitHub token'
+    required: true
+    default: ${{ github.token }}
+  maven-version:
+    description: 'Maven version'
+    required: true
+    default: '3.9.9'
 
 runs:
   using: "composite"
@@ -63,98 +56,74 @@ runs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        token: ${{ inputs.gh-token }}
+        fetch-depth: 0
+        token: ${{ inputs.github-token }}
 
-    - name: Configure Git
+    - name: Setup Git Config
       shell: bash
       # language="shell script"
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-        cat .git/config
         printf '%s\n' \
           '/github-actions/' \
+          '/gha-creds*.json' \
+          '/settings.xml' \
+          '/settings-global.xml' \
+          '/toolchains.xml' \
           >> ".git/info/exclude"
 
-    - name: Copy Action Ref
-      id: copy_action_ref
-      shell: bash
-      env:
-        ACTION_REF: ${{ github.action_ref }}
-      run: echo "ref=${ACTION_REF}" >> $GITHUB_OUTPUT
-
-    - name: Checkout Resources
-      uses: actions/checkout@v4
-      with:
-        repository: 'emergentdotorg/github-actions'
-        ref: "${{ steps.copy_action_ref.outputs.ref }}"
-        token: ${{ inputs.gh-token }}
-        path: github-actions
-        sparse-checkout: |
-          setup-java-env/
-
-    - name: Resolve Paths
-      id: resolve_paths
-      shell: bash
-      env:
-        GITHUB_WORKSPACE: ${{ github.workspace }}
-        SETTINGS_PATH: ${{ inputs.settings-path != '' && inputs.settings-path || '~/.m2' }}
-      # language="shell script"
-      run: |
-        RESOLVED_PATH="${SETTINGS_PATH/#~/$HOME}"
-        mkdir -p "${RESOLVED_PATH}"
-        printf '%s\n' \
-          "settings-path=${RESOLVED_PATH}" \
-          "user-settings=${RESOLVED_PATH}/settings.xml" \
-          "user-toolchains=${RESOLVED_PATH}/toolchains.xml" \
-          "global-settings=${GITHUB_WORKSPACE}/github-actions/setup-java-env/settings.xml" \
-          >> $GITHUB_OUTPUT
-
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: |
-          11
-          8
-          ${{ inputs.java-version }}
-        mvn-toolchain-id: |
-          temurin_11
-          temurin_8
-          selected
-        server-id: ${{ inputs.server-id }}
-        server-username: ${{ inputs.server-username }}
-        server-password: ${{ inputs.server-password }}
-        gpg-passphrase: ${{ inputs.gpg-passphrase }}
-        gpg-private-key: ${{ inputs.gpg-private-key }}
-        settings-path: '${{ steps.resolve_paths.outputs.settings-path }}'
-
-    - name: Setup Maven
+    - name: Install Maven
       uses: stCarolas/setup-maven@v5
       with:
         maven-version: ${{ inputs.maven-version }}
 
-    - name: Verify Java
-      if: ${{ inputs.debug == 'true' }}
+    - name: 'Setup Java'
+      uses: actions/setup-java@v4
+      with:
+        settings-path: '~/.m2'
+        server-id: ${{ inputs.deploy-server }}
+        server-username: ${{ inputs.deploy-username-env }}
+        server-password: ${{ inputs.deploy-password-env }}
+        gpg-passphrase: ${{ inputs.gpg-passphrase-env }}
+        gpg-private-key: ${{ inputs.gpg-private-key }}
+        distribution: 'temurin'
+        java-version: |
+          8
+          11
+          17
+        mvn-toolchain-id: |
+          temurin_8
+          temurin_11
+          temurin_17
+
+    - uses: s4u/maven-settings-action@v3.1.0
+      if: ${{ inputs.deploy-server != 'github' && success() }}
+      with:
+        path: '~/.m2/settings-global.xml'
+        githubServer: 'false'
+        servers: >
+          [{
+            "id": "github",
+            "username": "${env.${{ inputs.github-username-env }}}",
+            "password": "${env.${{ inputs.github-password-env }}}"
+          }]
+
+    - name: 'Verify Java and Maven'
       shell: bash
       # language="shell script"
       run: |
-        echo "which java: $(which java)"
         java -version
         echo "JAVA_HOME: $JAVA_HOME"
         echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
         echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
-
-    - name: Verify Maven
-      if: ${{ inputs.debug == 'true' }}
-      shell: bash
-      env:
-        SETTINGS_PATH: "${{ steps.resolve_paths.outputs.settings-path }}"
-      # language="shell script"
-      run: |
-        echo "which mvn: $(which mvn)"
+        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
         mvn -version
-        echo "Contents of ${SETTINGS_PATH}/settings.xml:"
-        cat "${SETTINGS_PATH}/settings.xml"
-        echo "Contents of ${SETTINGS_PATH}/toolchains.xml:"
-        cat "${SETTINGS_PATH}/toolchains.xml"
+        catIfExists() {
+          if [ -f "$1" ]; then
+            cat "$1"
+          fi
+        }
+        catIfExists $HOME/.m2/settings.xml
+        catIfExists $HOME/.m2/settings-global.xml
+        catIfExists $HOME/.m2/toolchains.xml

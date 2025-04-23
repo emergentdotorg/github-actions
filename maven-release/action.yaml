@@ -1,0 +1,215 @@
+name: 'Maven Release Action'
+description: 'Build and release a Maven project'
+outputs:
+  version:
+    description: ''
+    value: ${{ steps.resolve_values.outputs.version }}
+inputs:
+  deploy-server:
+    description: 'Dist server id'
+    required: true
+    default: 'github'
+  deploy-actor:
+    description: 'Dist username'
+    required: true
+    default: ${{ github.actor }}
+  deploy-token:
+    description: 'Dist password'
+    required: true
+    default: ${{ github.token }}
+  github-actor:
+    description: 'GitHub actor'
+    required: true
+    default: ${{ github.actor }}
+  github-token:
+    description: 'GitHub token'
+    required: true
+    default: ${{ github.token }}
+  gpg-passphrase:
+    description: 'GPG passphrase'
+    required: false
+    default: ''
+  gpg-private-key:
+    description: 'GPG private key'
+    required: false
+    default: ''
+  activate-profiles:
+    description: 'Maven profiles to activate, comma-delimited'
+    required: true
+    default: 'release'
+  maven-version:
+    description: 'Maven version'
+    required: true
+    default: '3.9.9'
+  dry-run:
+    description: "Perform a dry run release"
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ inputs.github-token }}
+        
+    - name: Setup Java Env
+      uses: emergentdotorg/github-actions/setup-java-env@main
+      with:
+        deploy-server: ${{ inputs.deploy-server }}
+        deploy-username-env: 'DEPLOY_ACTOR'
+        deploy-password-env: 'DEPLOY_TOKEN'
+        github-username-env: 'GITHUB_ACTOR'
+        github-password-env: 'GITHUB_TOKEN'
+        gpg-passphrase-env: 'GPG_PASSPHRASE'
+        gpg-private-key: ${{ inputs.gpg-private-key }}
+        maven-version:  ${{ inputs.maven-version }}
+
+
+    - name: Setup Git Config
+      shell: bash
+      # language="shell script"
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        printf '%s\n' \
+          '/github-actions/' \
+          '/gha-creds*.json' \
+          '/settings.xml' \
+          '/settings-global.xml' \
+          '/toolchains.xml' \
+          >> ".git/info/exclude"
+
+    #- name: Resolve Actions Ref
+    #  id: resolve_action_ref
+    #  shell: bash
+    #  env:
+    #    ACTION_REF: ${{ github.action_ref }}
+    #    ACTION_REPO: ${{ github.action_repository }}
+    #  # language="shell script"
+    #  run: |
+    #    echo "ref=${ACTION_REF}" >> $GITHUB_OUTPUT
+    #    echo "repo=${ACTION_REPO}" >> $GITHUB_OUTPUT
+    #
+    #- name: Checkout Actions
+    #  uses: actions/checkout@v4
+    #  with:
+    #    repository: "${{ steps.resolve_action_ref.outputs.repo }}"
+    #    ref: "${{ steps.resolve_action_ref.outputs.ref }}"
+    #    token: ${{ inputs.github-token }}
+    #    path: 'github-actions'
+    #    sparse-checkout: |
+    #      maven-release/
+
+    #- name: Install Maven
+    #  uses: stCarolas/setup-maven@v5
+    #  with:
+    #    maven-version: ${{ inputs.maven-version }}
+    #
+    #- name: 'Setup Java'
+    #  uses: actions/setup-java@v4
+    #  env:
+    #    DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
+    #    DEPLOY_TOKEN: ${{ inputs.deploy-token }}
+    #    GITHUB_ACTOR: ${{ inputs.github-actor }}
+    #    GITHUB_TOKEN: ${{ inputs.github-token }}
+    #    GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+    #  with:
+    #    settings-path: '~/.m2'
+    #    server-id: ${{ inputs.deploy-server }}
+    #    server-username: 'DIST_USERNAME'
+    #    server-password: 'DIST_PASSWORD'
+    #    gpg-passphrase: 'GPG_PASSPHRASE'
+    #    gpg-private-key: ${{ inputs.gpg-private-key }}
+    #    distribution: 'temurin'
+    #    java-version: |
+    #      8
+    #      11
+    #      17
+    #    mvn-toolchain-id: |
+    #      temurin_8
+    #      temurin_11
+    #      temurin_17
+    #
+    #- uses: s4u/maven-settings-action@v3.1.0
+    #  with:
+    #    path: '~/.m2/settings-global.xml'
+    #    githubServer: 'true'
+
+    - name: 'Verify Java and Maven'
+      shell: bash
+      # language="shell script"
+      run: |
+        java -version
+        echo "JAVA_HOME: $JAVA_HOME"
+        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+        mvn -version
+        catIfExists() {
+          if [ -f "$1" ]; then
+            cat "$1"
+          fi
+        }
+        catIfExists $HOME/.m2/settings.xml
+        catIfExists $HOME/.m2/settings-global.xml
+        catIfExists $HOME/.m2/toolchains.xml
+
+    - name: Resolve Values
+      id: resolve_values
+      shell: bash
+      env:
+        ACTIVATE_PROFILES: ${{ inputs.activate-profiles }}
+      # language="shell script"
+      run: |
+        declare -a profilesArr=( ${ACTIVATE_PROFILES} )
+        PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
+        echo "profiles=${PROFILES}" >> $GITHUB_OUTPUT
+        ::
+        declare -a mvnArgs=( )
+        mvnArgs+=( -gs "${HOME}/.m2/settings-global.xml" )
+        version="$(mvn ${mvnArgs[*]} help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        echo "version=${version%-SNAPSHOT}" >> $GITHUB_OUTPUT
+
+    - name: Invoke Maven Release
+      shell: bash
+      env:
+        DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
+        DEPLOY_TOKEN: ${{ inputs.deploy-token }}
+        GITHUB_ACTOR: ${{ inputs.github-actor }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        PROFILES: ${{ steps.resolve_values.outputs.profiles }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      # language="shell script"
+      run: |
+        declare -a _args=( )
+        _args+=( "-B" "-e" )
+        _args+=( "-DlocalCheckout=true" )
+        _args+=( "-DpushChanges=false" )
+        _args+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
+        ::
+        if [ -n "${PROFILES}" ]; then 
+          _args+=( "-P=${PROFILES}" )
+        fi
+        ::
+        declare -a _argumentsOpt=( )
+        _argumentsOpt+=( "-ntp" )
+        _argumentsOpt+=( -gs "${HOME}/.m2/settings-global.xml" )
+        _args+=( "${argumentsOptionArr[@]}" )
+        _args+=( "-Darguments=${argumentsOptionArr[*]}" )
+        ::
+        declare -a _goals=( "release:prepare" )
+        if [ "${DRY_RUN}" != "true" ]; then 
+          _goals+=( "release:perform" ) ; 
+        fi
+        ::
+        mvn "${_args[@]}" "${_goals[@]}"
+
+    - name: Commit Maven Release
+      if: ${{ inputs.dry-run == 'false' && success() }}
+      shell: bash
+      # language="shell script"
+      run: git push --follow-tags

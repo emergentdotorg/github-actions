@@ -1,0 +1,56 @@
+name: 'Maven Verify Action'
+description: 'Build and test a Maven project'
+inputs:
+  github-actor:
+    description: 'GitHub actor'
+    required: true
+    default: ${{ github.actor }}
+  github-token:
+    description: 'GitHub token'
+    required: true
+    default: ${{ github.token }}
+  activate-profiles:
+    description: "Maven profiles to activate"
+    required: true
+    default: 'emergent-release'
+  maven-threads:
+    description: 'Number of threads used by maven'
+    required: true
+    default: '4'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Java Env
+      id: setup-env
+      uses: emergentdotorg/github-actions/setup-java-env@main
+
+    - name: Resolve Values
+      id: resolve_values
+      shell: bash
+      env:
+        ACTIVATE_PROFILES: ${{ inputs.activate-profiles }}
+      # language="shell script"
+      run: |
+        declare -a profilesArr=( ${ACTIVATE_PROFILES} )
+        PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
+        echo "profiles=${PROFILES}" >> $GITHUB_OUTPUT
+
+    - name: Test with Maven
+      shell: bash
+      env:
+        GITHUB_ACTOR: ${{ inputs.github-actor }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        MAVEN_PROFILES: ${{ steps.resolve_values.outputs.profiles }}
+        MAVEN_THREADS: ${{ inputs.maven-threads }}
+      # language="shell script"
+      run: |
+        declare -a argsArr=( )        
+        argsArr+=( "-ntp" "-e" )
+        argsArr+=( "-T" "${MAVEN_THREADS}" )
+        if [ -n "${MAVEN_PROFILES}" ]; then
+          argsArr+=( "-P=${MAVEN_PROFILES}" )
+        fi
+        mvn "${argsArr[@]}" clean verify

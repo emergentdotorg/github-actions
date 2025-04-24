@@ -116,8 +116,6 @@ runs:
         server-id: ${{ inputs.deploy-server }}
         server-username: ${{ inputs.deploy-username-env }}
         server-password: ${{ inputs.deploy-password-env }}
-        gpg-passphrase: ${{ inputs.gpg-passphrase-env }}
-        gpg-private-key: ${{ inputs.gpg-private-key }}
         distribution: 'temurin'
         java-version: |
           8

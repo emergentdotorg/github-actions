@@ -244,6 +244,7 @@ runs:
     - name: Invoke Maven Release
       shell: bash
       env:
+        DEPLOY_SERVER: ${{ inputs.deploy-server }}
         DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
         DEPLOY_ALT_REPO: ${{ inputs.deploy-alt-repo }}
@@ -266,6 +267,9 @@ runs:
         _args+=( "-e" )
         _args+=( "-DlocalCheckout=true" )
         _args+=( "-DpushChanges=false" )
+        if [ "central" = "${DEPLOY_SERVER}" ]; then
+          _args+=( "-DpublishingServerId=${DEPLOY_SERVER}" )
+        fi
         if [ -n "${GITHUB_REPOSITORY}" ]; then
           _args+=( "-DownerAndProject=${GITHUB_REPOSITORY}" )
         fi

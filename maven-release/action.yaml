@@ -36,7 +36,7 @@ inputs:
   maven-profiles:
     description: 'Maven profiles to activate, comma-delimited'
     required: true
-    default: ''
+    default: 'emergent-release'
   java-version:
     description: 'Java version'
     required: false

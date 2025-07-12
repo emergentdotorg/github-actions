@@ -22,8 +22,8 @@ on:
         type: string
         required: true
         default: 'emergent-release'
-      maven-push-changes:
-        description: 'Push commits as part of the maven release goals'
+      push-changes:
+        description: 'Push commits and tags to the source repository'
         type: boolean
         required: false
         default: true
@@ -97,9 +97,6 @@ jobs:
         id: maven_release
         uses: emergentdotorg/github-actions/maven-release@main
         with:
-          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
-          dry-run: ${{ inputs.dry-run }}
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}
           deploy-server: ${{ inputs.deploy-server }}
@@ -108,4 +105,8 @@ jobs:
           deploy-alt-repo: ${{ steps.resolve_vars.outputs.deploy-alt-repo }}
           deploy-alt-release-repo: ${{ steps.resolve_vars.outputs.deploy-alt-release-repo }}
           deploy-alt-snapshot-repo: ${{ steps.resolve_vars.outputs.deploy-alt-snapshot-repo }}
+          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          push-changes: ${{ inputs.push-changes }}
+          dry-run: ${{ inputs.dry-run }}
 

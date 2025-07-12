@@ -227,7 +227,7 @@ runs:
       run: |
         declare -a profilesArr=( ${MAVEN_PROFILES} )
         PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
-        declare -a mvnArgs=( )
+        declare -a mvnArgs=( -e )
         if [ -f "${USER_SETTINGS}" ]; then
           mvnArgs+=( -s "${USER_SETTINGS}" )
         fi

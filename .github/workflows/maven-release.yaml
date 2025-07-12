@@ -16,12 +16,11 @@ on:
         description: 'Maven dist mgmt server-id'
         type: string
         required: true
-        default: 'emergent-nexus'
       maven-profiles:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         required: false
-        default: ''
+        default: 'emergent-release'
       push-changes:
         description: 'Push commits and tags to the source repository'
         type: boolean

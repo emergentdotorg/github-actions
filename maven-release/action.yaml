@@ -6,7 +6,7 @@ outputs:
     value: ${{ steps.resolve_values.outputs.version }}
 inputs:
   deploy-server:
-    description: 'Dist server id'
+    description: 'Dist server id, e.g. central, github, nexus'
     required: true
     default: 'github'
   deploy-actor:
@@ -33,10 +33,14 @@ inputs:
     description: 'GPG private key'
     required: false
     default: ''
-  activate-profiles:
+  maven-profiles:
     description: 'Maven profiles to activate, comma-delimited'
     required: true
     default: ''
+  java-version:
+    description: 'Java version'
+    required: false
+    default: '17'
   maven-version:
     description: 'Maven version'
     required: true
@@ -47,6 +51,22 @@ inputs:
     default: '[GitHub] [no ci] '
   tag-name-format:
     description: 'Maven release tagNameFormat'
+    required: false
+    default: '@{project.version}'
+  deploy-alt-repo:
+    description: 'Value for -DaltDeploymentRepository'
+    required: false
+    default: ''
+  deploy-alt-release-repo:
+    description: 'Value for -DaltReleaseDeploymentRepository'
+    required: false
+    default: ''
+  deploy-alt-snapshot-repo:
+    description: 'Value for -DaltSnapshotDeploymentRepository'
+    required: false
+    default: ''
+  settings-dir:
+    description: 'Path where maven settings.xml lives, default is ~/.m2'
     required: false
     default: ''
   dry-run:
@@ -115,6 +135,7 @@ runs:
     - name: 'Setup Java'
       uses: actions/setup-java@v4
       with:
+        cache: 'maven'
         settings-path: ${{ steps.resolve_paths.outputs.settings-path }}
         server-id: ${{ inputs.deploy-server }}
         server-username: 'DEPLOY_ACTOR'
@@ -157,7 +178,9 @@ runs:
         mvn -version
         catIfExists() {
           if [ -f "$1" ]; then
+            echo "File: $1"
             cat "$1"
+            echo "-----"
           else
             echo "WARNING: File $1 does not exist"
           fi
@@ -192,16 +215,14 @@ runs:
       id: resolve_values
       shell: bash
       env:
+        MAVEN_PROFILES: ${{ inputs.maven-profiles }}
         USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
         USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
         GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
-        ACTIVATE_PROFILES: ${{ inputs.activate-profiles }}
       # language="shell script"
       run: |
-        declare -a profilesArr=( ${ACTIVATE_PROFILES} )
+        declare -a profilesArr=( ${MAVEN_PROFILES} )
         PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
-        echo "profiles=${PROFILES}" >> $GITHUB_OUTPUT
-        #
         declare -a mvnArgs=( )
         if [ -f "${USER_SETTINGS}" ]; then
           mvnArgs+=( -s "${USER_SETTINGS}" )
@@ -209,19 +230,26 @@ runs:
         if [ -f "${GLOBAL_SETTINGS}" ]; then
           mvnArgs+=( -gs "${GLOBAL_SETTINGS}" )
         fi
-        version="$(mvn ${mvnArgs[*]} help:evaluate -q -DforceStdout -Dexpression=project.version)"
-        echo "version=${version%-SNAPSHOT}" >> $GITHUB_OUTPUT
+        VERSION="$(mvn ${mvnArgs[*]} help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        VERSION="${VERSION%-SNAPSHOT}"
+        printf '%s\n' \
+          "profiles=${PROFILES}" \
+          "version=${VERSION}" \
+          >> $GITHUB_OUTPUT
 
     - name: Invoke Maven Release
       shell: bash
       env:
         DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
+        DEPLOY_ALT_REPO: ${{ inputs.deploy-alt-repo }}
+        DEPLOY_ALT_RELEASE_REPO: ${{ inputs.deploy-alt-release-repo }}
+        DEPLOY_ALT_SNAPSHOT_REPO: ${{ inputs.deploy-alt-snapshot-repo }}
         GITHUB_ACTOR: ${{ inputs.github-actor }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
         MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
-        PROFILES: ${{ steps.resolve_values.outputs.profiles }}
+        MAVEN_PROFILES: ${{ steps.resolve_values.outputs.profiles }}
         DRY_RUN: ${{ inputs.dry-run }}
         SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}
         TAG_NAME_FORMAT: ${{ inputs.tag-name-format }}
@@ -230,29 +258,41 @@ runs:
         GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
       # language="shell script"
       run: |
-        declare -a _args=( )
-        _args+=( "-B" "-e" )
+        declare -a _args=( "-B" )
+        _args+=( "-e" )
         _args+=( "-DlocalCheckout=true" )
         _args+=( "-DpushChanges=false" )
+        if [ -n "${GITHUB_REPOSITORY}" ]; then
+          _args+=( "-DownerAndProject=${GITHUB_REPOSITORY}" )
+        fi
         if [ -n "${SCM_COMMENT_PREFIX}" ]; then
           _args+=( "-DscmCommentPrefix=${SCM_COMMENT_PREFIX}" )
         fi
         if [ -n "${TAG_NAME_FORMAT}" ]; then
           _args+=( "-DtagNameFormat=${TAG_NAME_FORMAT}" )
         fi
-        if [ -n "${PROFILES}" ]; then 
-          _args+=( "-P=${PROFILES}" )
+        if [ -n "${MAVEN_PROFILES}" ]; then
+          _args+=( "-P=${MAVEN_PROFILES}" )
         fi
-        declare -a _argumentsOpt=( )
-        _argumentsOpt+=( "-ntp" )
+        declare -a argsOpt_=( )
+        argsOpt_+=( "--no-transfer-progress" )
         if [ -f "${USER_SETTINGS}" ]; then
-          _argumentsOpt+=( -s "${USER_SETTINGS}" )
+          argsOpt_+=( -s "${USER_SETTINGS}" )
         fi
         if [ -f "${GLOBAL_SETTINGS}" ]; then
-          _argumentsOpt+=( -gs "${GLOBAL_SETTINGS}" )
+          argsOpt_+=( -gs "${GLOBAL_SETTINGS}" )
         fi
-        _args+=( "${_argumentsOpt[@]}" )
-        _args+=( "-Darguments=${_argumentsOpt[*]}" )
+        if [ -n "${DEPLOY_ALT_REPO}" ]; then
+          argsOpt_+=( "-DaltDeploymentRepository=${DEPLOY_ALT_REPO}" )
+        fi
+        if [ -n "${DEPLOY_ALT_RELEASE_REPO}" ]; then
+          argsOpt_+=( "-DaltReleaseDeploymentRepository=${DEPLOY_ALT_RELEASE_REPO}" )
+        fi
+        if [ -n "${DEPLOY_ALT_SNAPSHOT_REPO}" ]; then
+          argsOpt_+=( "-DaltSnapshotDeploymentRepository=${DEPLOY_ALT_SNAPSHOT_REPO}" )
+        fi
+        _args+=( "${argsOpt_[@]}" )
+        _args+=( "-Darguments=${argsOpt_[*]}" )
         declare -a _goals=( "release:prepare" )
         if [ "${DRY_RUN}" != "true" ]; then 
           _goals+=( "release:perform" ) ; 
@@ -260,7 +300,7 @@ runs:
         mvn "${_args[@]}" "${_goals[@]}"
 
     - name: Commit Maven Release
-      if: ${{ inputs.dry-run == 'false' && success() }}
+      if: ${{ inputs.dry-run != 'true' && success() }}
       shell: bash
       # language="shell script"
-      run: git push --follow-tags
+      run: git push --follow-tags  --atomic

@@ -8,21 +8,27 @@ on:
         description: "The new release version"
         value: ${{ jobs.release.outputs.version }}
     inputs:
-      dry-run:
-        description: 'Skip actually committing or deploying'
-        type: boolean
-        required: false
-        default: true
       java-version:
         description: 'JDK version to build with'
         type: string
         required: true
-      server-id:
+      deploy-server:
         description: 'Maven dist mgmt server-id'
         type: string
         required: true
+        default: 'emergent-nexus'
+      maven-profiles:
+        description: 'Maven profiles to activate, comma-delimited'
+        type: string
+        required: true
+        default: 'emergent-release'
       maven-push-changes:
         description: 'Push commits as part of the maven release goals'
+        type: boolean
+        required: false
+        default: true
+      dry-run:
+        description: 'Skip actually committing or deploying'
         type: boolean
         required: false
         default: false
@@ -33,96 +39,73 @@ jobs:
     runs-on: ubuntu-latest
     # Map the job outputs to step outputs
     outputs:
-      version: ${{ steps.resolve_vars.outputs.version }}
-    env:
-      DEPLOY_SERVER: ${{ inputs.server-id }}
-      # DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || github.actor }}
-      # DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || github.token }}
-      DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || 'emergentbot' }}
-      DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || secrets.emergentbot_deploy_token }}
-      MAVEN_GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
-      MAVEN_GPG_KEY: ${{ secrets.maven_gpg_private_key }}
-      # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}
-#      GH_TOKEN: ${{ secrets.emergentbot_deploy_token }}
-      GH_TOKEN: ${{ github.token }}
-      RELEASE_PROFILES: 'emergent-release'
+      version: ${{ steps.maven_release.outputs.version }}
     steps:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ env.GH_TOKEN }}
-
-      - name: Setup Java Env
-        id: java-env
-        uses: emergentdotorg/github-actions/setup-java-env@main
-        with:
-          # java-version: ${{ inputs.java-version }}
-          maven-version: ${{ inputs.maven-version }}
-          github-token: ${{ env.GH_TOKEN }}
-          deploy-server: ${{ inputs.server-id }}
-          deploy-username-env: DEPLOY_USERNAME
-          deploy-password-env: DEPLOY_PASSWORD
-          gpg-passphrase-env: MAVEN_GPG_PASSPHRASE
-          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
 
       - name: Resolve Vars
         id: resolve_vars
         shell: bash
         env:
+          DEPLOY_SERVER: ${{ inputs.deploy-server }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          DEPLOY_CENTRAL_ACTOR: ${{ secrets.deploy_central_actor }}
+          DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
+          DEPLOY_GITHUB_ACTOR: 'emergentbot'
+          DEPLOY_GITHUB_TOKEN: ${{ secrets.emergentbot_deploy_token }}
+          DEPLOY_NEXUS_ACTOR: ${{ secrets.deploy_nexus_actor }}
+          DEPLOY_NEXUS_TOKEN: ${{ secrets.deploy_nexus_token }}
         # language="shell script"
         run: |
-          if [ "${DEPLOY_SERVER}" = "github" ]; then
-            # ALTREPO="github::https://maven.pkg.github.com/${GITHUB_REPOSITORY}"
-            ALTREPO="github::https://maven.pkg.github.com/emergentdotorg/maven-repository"
-          fi
-          VERSION="$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )"
-          VERSION="${VERSION%-SNAPSHOT}"
+          case "${DEPLOY_SERVER}" in
+            central)
+              DEPLOY_ACTOR="${DEPLOY_CENTRAL_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_CENTRAL_TOKEN}"
+              ;;
+            github)
+              DEPLOY_ACTOR="${{ github.actor }}"
+              DEPLOY_TOKEN="${{ github.token }}"
+              DEPLOY_ALT_REPO="github::https://maven.pkg.github.com/emergentdotorg/${GITHUB_REPOSITORY}"
+              ;;
+            emergent-github)
+              DEPLOY_ACTOR="${DEPLOY_GITHUB_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_GITHUB_TOKEN}"
+              DEPLOY_ALT_REPO="github::https://maven.pkg.github.com/emergentdotorg/maven-repository"
+              ;;
+            emergent-nexus)
+              DEPLOY_ACTOR="${DEPLOY_NEXUS_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_NEXUS_TOKEN}"
+              DEPLOY_ALT_RELEASE_REPO="nexus::https://nexus.emergent.org/repository/maven-releases/"
+              DEPLOY_ALT_SNAPSHOT_REPO="nexus::https://nexus.emergent.org/repository/maven-snapshots/"
+              ;;
+            *)
+              ;;
+          esac
           printf '%s\n' \
-            "altrepo=${ALTREPO}" \
+            "deploy-actor=${DEPLOY_ACTOR}" \
+            "deploy-token=${DEPLOY_TOKEN}" \
+            "deploy-alt-repo=${DEPLOY_ALT_REPO}" \
+            "deploy-alt-release-repo=${DEPLOY_ALT_RELEASE_REPO}" \
+            "deploy-alt-snapshot-repo=${DEPLOY_ALT_SNAPSHOT_REPO}" \
             "version=${VERSION}" \
             >> $GITHUB_OUTPUT
 
-      - name: Perform Maven Release
-        shell: bash
-        env:
-          DRY_RUN: ${{ inputs.dry-run }}
-          PUSH_CHANGES: ${{ inputs.maven-push-changes }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_WORKSPACE: ${{ github.workspace }}
-          USER_SETTINGS_FILE: ${{ steps.java-env.outputs.user-settings }}
-          GLOBAL_SETTINGS_FILE: ${{ steps.java-env.outputs.global-settings }}
-          ALTREPO: ${{ steps.resolve_vars.outputs.altrepo }}
-        # language="shell script"
-        run: |
-          declare -a mvnArgs_=( "-B" )
-          mvnArgs_+=( "-DpushChanges=${PUSH_CHANGES}" )
-          mvnArgs_+=( "-DlocalCheckout=true" )
-          mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci] " )
-          mvnArgs_+=( "-DtagNameFormat=@{project.version}" )
-          mvnArgs_+=( "-DownerAndProject=${GITHUB_REPOSITORY}" )
-          mvnArgs_+=( "-P" "${RELEASE_PROFILES}" )
-          mvnArgs_+=( "-DreleaseProfiles=${RELEASE_PROFILES}" )
-          mvnArgs_+=( "-DpreparationProfiles=${RELEASE_PROFILES}" )
-          mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" )
-          mvnArgs_+=( "-gs" "${GLOBAL_SETTINGS_FILE}" )
-          declare -a mvnGoals_=( 'release:prepare' )
-          if [ "${DRY_RUN}" == "true" ]; then
-            mvnArgs_+=( "-DdryRun=true" )
-          else
-            mvnGoals_+=( "release:perform" )
-          fi
-          declare -a argsOpt_=( "--no-transfer-progress" )
-          if [ -n "${ALTREPO}" ]; then
-            argsOpt_+=( "-DaltDeploymentRepository=${ALTREPO}" )
-          fi
-          mvnArgs_+=( "${argsOpt_[@]}" )
-          mvnArgs_+=( "-Darguments=${argsOpt_[*]}" )
-          mvn "${mvnArgs_[@]}" "${mvnGoals_[@]}"
 
-      - name: Commit Maven Release
-        if: ${{ ! ( inputs.dry-run || inputs.maven-push-changes ) && success() }}
-        shell: bash
-        # language="shell script"
-        run: git push --follow-tags --atomic
+      - name: Maven Release
+        id: maven_release
+        uses: emergentdotorg/github-actions/maven-release@main
+        with:
+          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          dry-run: ${{ inputs.dry-run }}
+          java-version: ${{ inputs.java-version }}
+          maven-profiles: ${{ inputs.maven-profiles }}
+          deploy-server: ${{ inputs.deploy-server }}
+          deploy-actor: ${{ steps.resolve_vars.outputs.deploy-actor }}
+          deploy-token: ${{ steps.resolve_vars.outputs.deploy-token }}
+          deploy-alt-repo: ${{ steps.resolve_vars.outputs.deploy-alt-repo }}
+          deploy-alt-release-repo: ${{ steps.resolve_vars.outputs.deploy-alt-release-repo }}
+          deploy-alt-snapshot-repo: ${{ steps.resolve_vars.outputs.deploy-alt-snapshot-repo }}
+

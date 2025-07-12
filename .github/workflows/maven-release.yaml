@@ -1,0 +1,127 @@
+name: Reusable Maven Release
+
+on:
+  workflow_call:
+    # Map the workflow outputs to job outputs
+    outputs:
+      version:
+        description: "The new release version"
+        value: ${{ jobs.release.outputs.version }}
+    inputs:
+      dry-run:
+        description: 'Skip actually committing or deploying'
+        type: boolean
+        required: false
+        default: true
+      java-version:
+        description: 'JDK version to build with'
+        type: string
+        required: true
+      server-id:
+        description: 'Maven dist mgmt server-id'
+        type: string
+        required: true
+      maven-push-changes:
+        description: 'Push commits as part of the maven release goals'
+        type: boolean
+        required: false
+        default: false
+
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Map the job outputs to step outputs
+    outputs:
+      version: ${{ steps.resolve_vars.outputs.version }}
+    env:
+      DEPLOY_SERVER: ${{ inputs.server-id }}
+      # DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || github.actor }}
+      # DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || github.token }}
+      DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || 'emergentbot' }}
+      DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || secrets.emergentbot_deploy_token }}
+      GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
+      # GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_private_key }}
+      # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}
+      GH_TOKEN: ${{ secrets.emergentbot_deploy_token }}
+      RELEASE_PROFILES: 'emergent-release'
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ env.GH_TOKEN }}
+
+      - name: Setup Java Env
+        id: java-env
+        uses: emergentdotorg/github-actions/setup-java-env@v1
+        with:
+          java-version: ${{ inputs.java-version }}
+          maven-version: ${{ inputs.maven-version }}
+          gh-token: ${{ env.GH_TOKEN }}
+          server-id: ${{ inputs.server-id }}
+          server-username: DEPLOY_USERNAME
+          server-password: DEPLOY_PASSWORD
+          gpg-passphrase: GPG_PASSPHRASE
+          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+
+      - name: Resolve Vars
+        id: resolve_vars
+        shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        # language="shell script"
+        run: |
+          if [ "${DEPLOY_SERVER}" = "github" ]; then
+            # ALTREPO="github::https://maven.pkg.github.com/${GITHUB_REPOSITORY}"
+            ALTREPO="github::https://maven.pkg.github.com/emergentdotorg/maven-repository"
+          fi
+          VERSION="$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )"
+          VERSION="${VERSION%-SNAPSHOT}"
+          printf '%s\n' \
+            "altrepo=${ALTREPO}" \
+            "version=${VERSION}" \
+            >> $GITHUB_OUTPUT
+
+      - name: Perform Maven Release
+        shell: bash
+        env:
+          DRY_RUN: ${{ inputs.dry-run }}
+          PUSH_CHANGES: ${{ inputs.maven-push-changes }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          USER_SETTINGS_FILE: ${{ steps.java-env.outputs.user-settings }}
+          GLOBAL_SETTINGS_FILE: ${{ steps.java-env.outputs.global-settings }}
+          ALTREPO: ${{ steps.resolve_vars.outputs.altrepo }}
+        # language="shell script"
+        run: |
+          declare -a mvnArgs_=( "-B" )
+          mvnArgs_+=( "-DpushChanges=${PUSH_CHANGES}" )
+          mvnArgs_+=( "-DlocalCheckout=true" )
+          mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci] " )
+          mvnArgs_+=( "-DtagNameFormat=@{project.version}" )
+          mvnArgs_+=( "-DownerAndProject=${GITHUB_REPOSITORY}" )
+          mvnArgs_+=( "-P" "${RELEASE_PROFILES}" )
+          mvnArgs_+=( "-DreleaseProfiles=${RELEASE_PROFILES}" )
+          mvnArgs_+=( "-DpreparationProfiles=${RELEASE_PROFILES}" )
+          mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" )
+          mvnArgs_+=( "-gs" "${GLOBAL_SETTINGS_FILE}" )
+          declare -a mvnGoals_=( 'release:prepare' )
+          if [ "${DRY_RUN}" == "true" ]; then
+            mvnArgs_+=( "-DdryRun=true" )
+          else
+            mvnGoals_+=( "release:perform" )
+          fi
+          declare -a argsOpt_=( "--no-transfer-progress" )
+          if [ -n "${ALTREPO}" ]; then
+            argsOpt_+=( "-DaltDeploymentRepository=${ALTREPO}" )
+          fi
+          mvnArgs_+=( "${argsOpt_[@]}" )
+          mvnArgs_+=( "-Darguments=${argsOpt_[*]}" )
+          mvn "${mvnArgs_[@]}" "${mvnGoals_[@]}"
+
+      - name: Commit Maven Release
+        if: ${{ ! ( inputs.dry-run || inputs.maven-push-changes ) && success() }}
+        shell: bash
+        # language="shell script"
+        run: git push --follow-tags --atomic

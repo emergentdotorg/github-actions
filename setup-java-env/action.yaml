@@ -2,10 +2,10 @@ name: 'Java Maven Environment Setup'
 description: 'Setup Java Environment'
 outputs:
   user-settings:
-    description: 'Path to user settings file'
+    description: 'Path to maven user settings file'
     value: ${{ steps.resolve_paths.outputs.settings-path }}/settings.xml
   user-toolchains:
-    description: 'Path to user toolchains file'
+    description: 'Path to maven user toolchains file'
     value: ${{ steps.resolve_paths.outputs.settings-path }}/toolchains.xml
   global-settings:
     description: 'Path to global settings file'

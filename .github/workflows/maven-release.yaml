@@ -94,7 +94,6 @@ jobs:
           USER_SETTINGS_FILE: ${{ steps.java-env.outputs.user-settings }}
           GLOBAL_SETTINGS_FILE: ${{ steps.java-env.outputs.global-settings }}
           ALTREPO: ${{ steps.resolve_vars.outputs.altrepo }}
-          GPG_
         # language="shell script"
         run: |
           declare -a mvnArgs_=( "-B" )

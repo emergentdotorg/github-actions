@@ -41,7 +41,7 @@ jobs:
       DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || 'emergentbot' }}
       DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || secrets.emergentbot_deploy_token }}
       GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
-      # GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_private_key }}
+      GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_private_key }}
       # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}
 #      GH_TOKEN: ${{ secrets.emergentbot_deploy_token }}
       GH_TOKEN: ${{ github.token }}
@@ -94,6 +94,7 @@ jobs:
           USER_SETTINGS_FILE: ${{ steps.java-env.outputs.user-settings }}
           GLOBAL_SETTINGS_FILE: ${{ steps.java-env.outputs.global-settings }}
           ALTREPO: ${{ steps.resolve_vars.outputs.altrepo }}
+          GPG_
         # language="shell script"
         run: |
           declare -a mvnArgs_=( "-B" )

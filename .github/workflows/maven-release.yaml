@@ -40,8 +40,8 @@ jobs:
       # DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || github.token }}
       DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || 'emergentbot' }}
       DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || secrets.emergentbot_deploy_token }}
-      GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
-      GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_private_key }}
+      MAVEN_GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
+      MAVEN_GPG_KEY: ${{ secrets.maven_gpg_private_key }}
       # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}
 #      GH_TOKEN: ${{ secrets.emergentbot_deploy_token }}
       GH_TOKEN: ${{ github.token }}
@@ -57,13 +57,13 @@ jobs:
         id: java-env
         uses: emergentdotorg/github-actions/setup-java-env@main
         with:
-          java-version: ${{ inputs.java-version }}
+          # java-version: ${{ inputs.java-version }}
           maven-version: ${{ inputs.maven-version }}
           github-token: ${{ env.GH_TOKEN }}
           deploy-server: ${{ inputs.server-id }}
           deploy-username-env: DEPLOY_USERNAME
           deploy-password-env: DEPLOY_PASSWORD
-          gpg-passphrase-env: GPG_PASSPHRASE
+          gpg-passphrase-env: MAVEN_GPG_PASSPHRASE
           gpg-private-key: ${{ secrets.maven_gpg_private_key }}
 
       - name: Resolve Vars

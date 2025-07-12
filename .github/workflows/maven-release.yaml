@@ -20,8 +20,8 @@ on:
       maven-profiles:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
-        required: true
-        default: 'emergent-release'
+        required: false
+        default: ''
       push-changes:
         description: 'Push commits and tags to the source repository'
         type: boolean
@@ -95,7 +95,7 @@ jobs:
 
       - name: Maven Release
         id: maven_release
-        uses: emergentdotorg/github-actions/maven-release@main
+        uses: emergentdotorg/github-actions/maven-release@v3
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}

@@ -72,13 +72,13 @@ jobs:
             emergent-github)
               DEPLOY_ACTOR="${DEPLOY_GITHUB_ACTOR}"
               DEPLOY_TOKEN="${DEPLOY_GITHUB_TOKEN}"
-              DEPLOY_ALT_REPO="github::https://maven.pkg.github.com/emergentdotorg/maven-repository"
+              DEPLOY_ALT_REPO="emergent-github::https://maven.pkg.github.com/emergentdotorg/maven-repository"
               ;;
             emergent-nexus)
               DEPLOY_ACTOR="${DEPLOY_NEXUS_ACTOR}"
               DEPLOY_TOKEN="${DEPLOY_NEXUS_TOKEN}"
-              DEPLOY_ALT_RELEASE_REPO="nexus::https://nexus.emergent.org/repository/maven-releases/"
-              DEPLOY_ALT_SNAPSHOT_REPO="nexus::https://nexus.emergent.org/repository/maven-snapshots/"
+              DEPLOY_ALT_RELEASE_REPO="emergent-nexus::https://nexus.emergent.org/repository/maven-releases/"
+              DEPLOY_ALT_SNAPSHOT_REPO="emergent-nexus::https://nexus.emergent.org/repository/maven-snapshots/"
               ;;
             *)
               ;;

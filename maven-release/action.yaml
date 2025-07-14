@@ -38,6 +38,9 @@ inputs:
   tag-prefix:
     description: 'Tag prefix'
     default: 'v'
+  disable-versioner:
+    description: 'Disable versioner'
+    default: 'false'
 
 runs:
   using: "composite"
@@ -100,6 +103,7 @@ runs:
       env:
         GITHUB_WORKSPACE: ${{ github.workspace }}
         MAVEN_PROFILES: ${{ inputs.maven-profiles }}
+        DISABLE_VERSIONER: ${{ inputs.disable-versioner }}
       # language="shell script"
       run: |
         # Convert spaces to commas in the profiles string
@@ -108,7 +112,11 @@ runs:
         # Determine version
         VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
         VERSION="${VERSION%-SNAPSHOT}"
-        COMMITS="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=git-versioner.commitNumber)"
+        if [ "${DISABLE_VERSIONER}" != "true" ]; then
+          COMMITS="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=git-versioner.commitNumber)"
+        else
+          COMMITS="0"
+        fi
         echo "PROFILES=${PROFILES}"
         echo "VERSION_COMMITS=${COMMITS}"
         echo "VERSION_RELEASE=${VERSION}"
@@ -125,6 +133,7 @@ runs:
         mvn --non-recursive git-versioner:commit-patch "-Dgv.commit.message=chore: [%k] release"
 
     - shell: bash
+      if: ${{ inputs.disable-versioner != 'true' }}
       env:
         TAG_PREFIX: ${{ inputs.tag-prefix }}
       # language="shell script"

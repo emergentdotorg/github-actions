@@ -1,0 +1,22 @@
+name: Builder Helper Action
+description: Delivers resources to a github action workspace.
+author: Patrick Woodworth
+
+inputs:
+  resources-dest:
+    description: 'Path to where resource files should be placed relative to workspace root.'
+    default: '.mvn/res'
+
+outputs:
+  time:
+    description: The time we greeted you
+  maven_user_settings:
+    description: The path to the maven user settings.xml file (relative to workspace root).
+
+runs:
+  using: docker
+  image: Dockerfile
+  args:
+    - ${{ inputs.resources-dest }}
+  env:
+    INPUT_RESOURCES_DEST: ${{ inputs.resources-dest }}

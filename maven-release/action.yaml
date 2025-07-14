@@ -1,184 +1,76 @@
-name: 'Maven Release Action'
-description: 'Build and release a Maven project'
+name: 'Maven Release'
+description: 'Deploy using maven as build tool'
 outputs:
   version:
-    description: 'Built version'
-    value: ${{ steps.resolve_values.outputs.version }}
+    description: "The released version"
+    value: ${{ steps.resolve_values.outputs.version-release }}
 inputs:
+  java-version:
+    description: 'JDK version'
+    required: true
   deploy-server:
     description: 'Dist server id, e.g. central, github, nexus'
     required: true
-    default: 'github'
   deploy-actor:
-    description: 'Dist username'
+    description: 'user to authenticate at the artifact repository'
     required: true
-    default: ${{ github.actor }}
   deploy-token:
-    description: 'Dist password'
+    description: 'password to authenticate at the artifact repository'
     required: true
-    default: ${{ github.token }}
-  github-actor:
-    description: 'GitHub actor'
-    required: true
-    default: ${{ github.actor }}
-  github-token:
-    description: 'GitHub token'
-    required: true
-    default: ${{ github.token }}
-  gpg-passphrase:
-    description: 'GPG passphrase'
-    required: false
-    default: ''
   gpg-private-key:
-    description: 'GPG private key'
-    required: false
-    default: ''
+    description: 'private key for artifact signing'
+    required: true
+  gpg-passphrase:
+    description: 'pass phrase for te gpg signing key'
+    required: true
   maven-profiles:
     description: 'Maven profiles to activate, comma-delimited'
-    required: false
     default: ''
-  java-version:
-    description: 'Java version'
-    required: false
-    default: '17'
   maven-version:
     description: 'Maven version'
-    required: false
     default: '3.9.9'
-  scm-comment-prefix:
-    description: 'Maven release scmCommentPrefix'
-    required: false
-    default: '[GitHub] [no ci] '
-  tag-name-format:
-    description: 'Maven release tagNameFormat'
-    required: false
-    default: '@{project.version}'
-  deploy-alt-repo:
-    description: 'Value for -DaltDeploymentRepository'
-    required: false
-    default: ''
-  deploy-alt-release-repo:
-    description: 'Value for -DaltReleaseDeploymentRepository'
-    required: false
-    default: ''
-  deploy-alt-snapshot-repo:
-    description: 'Value for -DaltSnapshotDeploymentRepository'
-    required: false
-    default: ''
-  settings-dir:
-    description: 'Path where maven settings.xml lives, default is ~/.m2'
-    required: false
-    default: ''
-  push-changes:
-    description: 'Push commits and tags to the source repository'
-    required: false
-    default: 'true'
-  dry-run:
-    description: "Perform a dry run release"
-    required: false
-    default: 'false'
+  github-actor:
+    description: "Required for permission to tag the repo."
+    default: ${{ github.actor }}
+  github-token:
+    description: "Required for permission to tag the repo."
+    default: ${{ github.token }}
+  tag-prefix:
+    description: 'Tag prefix'
+    default: 'v'
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      id: checkout_primary
       with:
-        fetch-depth: 0
+        fetch-tags: true
         token: ${{ inputs.github-token }}
-        
-    #- name: Setup Java Env
-    #  id: setup_java
-    #  uses: emergentdotorg/github-actions/setup-java-env@v2
-    #  with:
-    #    deploy-server: ${{ inputs.deploy-server }}
-    #    deploy-username-env: 'DEPLOY_ACTOR'
-    #    deploy-password-env: 'DEPLOY_TOKEN'
-    #    github-username-env: 'GITHUB_ACTOR'
-    #    github-password-env: 'GITHUB_TOKEN'
-    #    gpg-passphrase-env: 'GPG_PASSPHRASE'
-    #    gpg-private-key: ${{ inputs.gpg-private-key }}
-    #    maven-version:  ${{ inputs.maven-version }}
 
-    - name: Setup Git Config
-      shell: bash
-      # language="shell script"
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "actions@github.com"
-        printf '%s\n' \
-          '/github-actions/' \
-          '/gha-creds*.json' \
-          '/settings.xml' \
-          '/settings-global.xml' \
-          '/toolchains.xml' \
-          >> ".git/info/exclude"
+    - uses: ./git-init-user
 
-    - name: Install Maven
-      uses: stCarolas/setup-maven@v5
-      with:
-        maven-version: ${{ inputs.maven-version }}
-
-    - name: Resolve Paths
+    - shell: bash
       id: resolve_paths
-      shell: bash
       env:
         GITHUB_WORKSPACE: ${{ github.workspace }}
-        SETTINGS_DIR: ${{ inputs.settings-dir != '' && inputs.settings-dir || '~/.m2' }}
+        SETTINGS_DIR: '~/.m2'
       # language="shell script"
       run: |
         RESOLVED_DIR="${SETTINGS_DIR/#~/$HOME}"
         mkdir -p "${RESOLVED_DIR}"
         printf '%s\n' \
-          "settings-path=${RESOLVED_DIR}" \
-          "user-settings=${RESOLVED_DIR}/settings.xml" \
-          "user-toolchains=${RESOLVED_DIR}/toolchains.xml" \
-          "global-settings=${RESOLVED_DIR}/settings-global.xml" \
+          "MAVEN_USER_SETTINGS=${GITHUB_ACTION_PATH}/settings.xml" \
+          >> $GITHUB_ENV
+        printf '%s\n' \
+          "maven_user_settings=${GITHUB_ACTION_PATH}/settings.xml" \
           >> $GITHUB_OUTPUT
 
-    - name: 'Setup Java'
-      uses: actions/setup-java@v4
-      with:
-        settings-path: ${{ steps.resolve_paths.outputs.settings-path }}
-        server-id: ${{ inputs.deploy-server }}
-        server-username: 'DEPLOY_ACTOR'
-        server-password: 'DEPLOY_TOKEN'
-        distribution: 'temurin'
-        java-version: |
-          8
-          11
-          17
-        mvn-toolchain-id: |
-          temurin_8
-          temurin_11
-          temurin_17
-
-    - uses: s4u/maven-settings-action@v3.1.0
-      if: ${{ inputs.deploy-server != 'github' && success() }}
-      with:
-        path: ${{ steps.resolve_paths.outputs.global-settings }}
-        githubServer: 'false'
-        servers: >
-          [{
-            "id": "github",
-            "username": "${env.GITHUB_ACTOR}",
-            "password": "${env.GITHUB_TOKEN}"
-          }]
-
-    - name: 'Verify Java and Maven'
-      shell: bash
+    - shell: bash
       env:
-        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
       # language="shell script"
       run: |
-        java -version
-        echo "JAVA_HOME: $JAVA_HOME"
-        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
-        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
-        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
-        mvn -version
         catIfExists() {
           if [ -f "$1" ]; then
             echo "File: $1"
@@ -188,126 +80,82 @@ runs:
             echo "WARNING: File $1 does not exist"
           fi
         }
-        catIfExists "${USER_SETTINGS}"
-        catIfExists "${GLOBAL_SETTINGS}"
-        catIfExists "${USER_TOOLCHAINS}"
-        catIfExists ${{ github.workspace }}/.git/config
+        catIfExists "${MAVEN_USER_SETTINGS}"
 
-    #- name: Resolve Actions Ref
-    #  id: resolve_action_ref
-    #  shell: bash
-    #  env:
-    #    ACTION_REF: ${{ github.action_ref }}
-    #    ACTION_REPO: ${{ github.action_repository }}
-    #  # language="shell script"
-    #  run: |
-    #    echo "ref=${ACTION_REF}" >> $GITHUB_OUTPUT
-    #    echo "repo=${ACTION_REPO}" >> $GITHUB_OUTPUT
-    #
-    #- name: Checkout Actions
-    #  uses: actions/checkout@v4
-    #  with:
-    #    repository: "${{ steps.resolve_action_ref.outputs.repo }}"
-    #    ref: "${{ steps.resolve_action_ref.outputs.ref }}"
-    #    token: ${{ inputs.github-token }}
-    #    path: 'github-actions'
-    #    sparse-checkout: |
-    #      maven-release/
+    - uses: actions/setup-java@v4
+      with:
+        #cache: maven
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
+        server-id: ${{ inputs.deploy-server }}
+        server-username: DEPLOY_ACTOR
+        server-password: DEPLOY_TOKEN
 
-    - name: Resolve Values
+    - uses: stCarolas/setup-maven@v5
+      with:
+        maven-version: ${{ inputs.maven-version }}
+
+    - shell: bash
       id: resolve_values
-      shell: bash
       env:
+        GITHUB_WORKSPACE: ${{ github.workspace }}
         MAVEN_PROFILES: ${{ inputs.maven-profiles }}
-        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
       # language="shell script"
       run: |
-        declare -a profilesArr=( ${MAVEN_PROFILES} )
-        PROFILES=$(IFS=, ; echo "${profilesArr[*]}")
-        declare -a mvnArgs=( -e )
-        if [ -f "${USER_SETTINGS}" ]; then
-          mvnArgs+=( -s "${USER_SETTINGS}" )
-        fi
-        if [ -f "${GLOBAL_SETTINGS}" ]; then
-          mvnArgs+=( -gs "${GLOBAL_SETTINGS}" )
-        fi
-        VERSION="$(mvn ${mvnArgs[*]} help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        # Convert spaces to commas in the profiles string
+        declare -a _profiles=( ${MAVEN_PROFILES} )
+        PROFILES=$(IFS=, ; echo "${_profiles[*]}")
+        # Determine version
+        VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
         VERSION="${VERSION%-SNAPSHOT}"
+        COMMITS="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=git-versioner.commitNumber)"
+        echo "PROFILES=${PROFILES}"
+        echo "VERSION_COMMITS=${COMMITS}"
+        echo "VERSION_RELEASE=${VERSION}"
         printf '%s\n' \
           "profiles=${PROFILES}" \
-          "version=${VERSION}" \
+          "version-commits=${COMMITS}" \
+          "version-release=${VERSION}" \
           >> $GITHUB_OUTPUT
 
-    - name: Invoke Maven Release
-      shell: bash
+    - shell: bash
+      if: ${{ steps.resolve_values.outputs.version-commits != '0' }}
+      # language="shell script"
+      run: |
+        mvn --non-recursive git-versioner:commit-patch "-Dgv.commit.message=chore: [%k] release"
+
+    - shell: bash
       env:
-        DEPLOY_SERVER: ${{ inputs.deploy-server }}
+        TAG_PREFIX: ${{ inputs.tag-prefix }}
+      # language="shell script"
+      run: |
+        mvn --non-recursive \
+          "-Dtag.failWhenTagExist=true" \
+          "-Dtag.messagePattern=Release version %v" \
+          "-Dtag.namePattern=${TAG_PREFIX}%v" \
+          git-versioner:tag
+
+    - shell: bash
+      env:
         DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
-        DEPLOY_ALT_REPO: ${{ inputs.deploy-alt-repo }}
-        DEPLOY_ALT_RELEASE_REPO: ${{ inputs.deploy-alt-release-repo }}
-        DEPLOY_ALT_SNAPSHOT_REPO: ${{ inputs.deploy-alt-snapshot-repo }}
+        DEPLOY_SERVER: ${{ inputs.deploy-server }}
         GITHUB_ACTOR: ${{ inputs.github-actor }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
         MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         MAVEN_PROFILES: ${{ steps.resolve_values.outputs.profiles }}
-        DRY_RUN: ${{ inputs.dry-run }}
-        SCM_COMMENT_PREFIX: ${{ inputs.scm-comment-prefix }}
-        TAG_NAME_FORMAT: ${{ inputs.tag-name-format }}
-        USER_SETTINGS: ${{ steps.resolve_paths.outputs.user-settings }}
-        USER_TOOLCHAINS: ${{ steps.resolve_paths.outputs.user-toolchains }}
-        GLOBAL_SETTINGS: ${{ steps.resolve_paths.outputs.global-settings }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
       # language="shell script"
       run: |
-        declare -a _args=( "-B" )
-        _args+=( "-e" )
-        _args+=( "-DlocalCheckout=true" )
-        _args+=( "-DpushChanges=false" )
-        if [ -n "${GITHUB_REPOSITORY}" ]; then
-          _args+=( "-DownerAndProject=${GITHUB_REPOSITORY}" )
-        fi
-        if [ -n "${SCM_COMMENT_PREFIX}" ]; then
-          _args+=( "-DscmCommentPrefix=${SCM_COMMENT_PREFIX}" )
-        fi
-        if [ -n "${TAG_NAME_FORMAT}" ]; then
-          _args+=( "-DtagNameFormat=${TAG_NAME_FORMAT}" )
-        fi
-        if [ -n "${MAVEN_PROFILES}" ]; then
-          _args+=( "-P=${MAVEN_PROFILES}" )
-        fi
-        declare -a argsOpt_=( )
-        argsOpt_+=( "--no-transfer-progress" )
-        if [ -f "${USER_SETTINGS}" ]; then
-          argsOpt_+=( -s "${USER_SETTINGS}" )
-        fi
-        if [ -f "${GLOBAL_SETTINGS}" ]; then
-          argsOpt_+=( -gs "${GLOBAL_SETTINGS}" )
-        fi
-        if [ "central" = "${DEPLOY_SERVER}" ]; then
-          argsOpt_+=( "-DpublishingServerId=${DEPLOY_SERVER}" )
-        fi
-        if [ -n "${DEPLOY_ALT_REPO}" ]; then
-          argsOpt_+=( "-DaltDeploymentRepository=${DEPLOY_ALT_REPO}" )
-        fi
-        if [ -n "${DEPLOY_ALT_RELEASE_REPO}" ]; then
-          argsOpt_+=( "-DaltReleaseDeploymentRepository=${DEPLOY_ALT_RELEASE_REPO}" )
-        fi
-        if [ -n "${DEPLOY_ALT_SNAPSHOT_REPO}" ]; then
-          argsOpt_+=( "-DaltSnapshotDeploymentRepository=${DEPLOY_ALT_SNAPSHOT_REPO}" )
-        fi
-        _args+=( "${argsOpt_[@]}" )
-        _args+=( "-Darguments=${argsOpt_[*]}" )
-        declare -a _goals=( "release:prepare" )
-        if [ "${DRY_RUN}" != "true" ]; then 
-          _goals+=( "release:perform" ) ; 
-        fi
-        mvn "${_args[@]}" "${_goals[@]}"
+        echo "project.version=$(mvn help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        declare -a _args=( "-e"  "--batch-mode" "--no-transfer-progress" )
+        _args+=( "-s" "${MAVEN_USER_SETTINGS}" )
+        if [ -n "${MAVEN_PROFILES}" ]; then _args+=( "-P${MAVEN_PROFILES}" ) ; fi
+        export GPG_TTY=$(tty) && mvn "${_args[@]}" deploy
 
-    - name: Commit Maven Release
-      if: ${{ inputs.dry-run != 'true' && inputs.push-changes == 'true' && success() }}
-      shell: bash
+    - shell: bash
+      if: success()
       # language="shell script"
-      run: git push --follow-tags  --atomic
+      run: |
+        git push --follow-tags --atomic

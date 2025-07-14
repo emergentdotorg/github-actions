@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0
+                      https://maven.apache.org/xsd/settings-1.2.0.xsd">
+
+  <!-- localRepository
+   | The path to the local repository maven will use to store artifacts.
+   |
+   | Default: ${user.home}/.m2/repository
+  <localRepository>/path/to/local/repo</localRepository>
+  -->
+
+  <!-- interactiveMode
+   | This will determine whether maven prompts you when it needs input. If set to false,
+   | maven will use a sensible default value, perhaps based on some other setting, for
+   | the parameter in question.
+   |
+   | Default: true
+  <interactiveMode>true</interactiveMode>
+  -->
+
+  <!-- offline
+   | Determines whether maven should attempt to connect to the network when executing a build.
+   | This will have an effect on artifact downloads, artifact deployment, and others.
+   |
+   | Default: false
+  <offline>false</offline>
+  -->
+
+  <servers>
+    <server>
+      <id>github</id>
+      <username>${env.GITHUB_ACTOR}</username>
+      <password>${env.GITHUB_TOKEN}</password>
+    </server>
+    <server>
+      <id>${env.DEPLOY_SERVER}</id>
+      <username>${env.DEPLOY_ACTOR}</username>
+      <password>${env.DEPLOY_TOKEN}</password>
+    </server>
+  </servers>
+
+  <profiles>
+
+    <!-- central distmgt and repositories
+     | This profile is located in the pom.xml as it requires activating a plugin.
+     |
+    <profile>
+      <id>emergent-central-distmgmt</id>
+    </profile>
+    -->
+
+    <!-- emergent-nexus distmgt & repositories
+    -->
+
+    <profile>
+      <id>emergent-nexus-distmgmt</id>
+      <activation>
+        <property>
+          <name>env.DEPLOY_SERVER</name>
+          <value>emergent-nexus</value>
+        </property>
+      </activation>
+      <properties>
+        <altReleaseDeploymentRepository>emergent-nexus::https://nexus.emergent.org/repository/maven-releases/</altReleaseDeploymentRepository>
+        <altSnapshotDeploymentRepository>emergent-nexus::https://nexus.emergent.org/repository/maven-snapshots/</altSnapshotDeploymentRepository>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>emergent-nexus-repositories</id>
+      <repositories>
+        <repository>
+          <id>emergent-nexus-releases</id>
+          <url>https://nexus.emergent.org/repository/maven-releases/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>emergent-nexus-snapshots</id>
+          <url>https://nexus.emergent.org/repository/maven-snapshots/</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
+
+    <!-- emergent-github distmgt & repositories
+     | A maven repo setup in a shared github repo
+    -->
+
+    <profile>
+      <id>emergent-github-distmgmt</id>
+      <activation>
+        <property>
+          <name>env.DEPLOY_SERVER</name>
+          <value>emergent-github</value>
+        </property>
+      </activation>
+      <properties>
+        <altDeploymentRepository>emergent-github::https://maven.pkg.github.com/emergentdotorg/maven-repository/</altDeploymentRepository>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>emergent-github-repositories</id>
+      <repositories>
+        <repository>
+          <id>emergent-github</id>
+          <url>https://maven.pkg.github.com/emergentdotorg/maven-repository/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
+
+    <!-- emergent-local distmgt & repositories
+     | A fallback to the local filesystem
+    -->
+
+    <profile>
+      <id>emergent-local-distmgmt</id>
+      <activation>
+        <property>
+          <name>env.DEPLOY_SERVER</name>
+          <value>emergent-local</value>
+        </property>
+      </activation>
+      <properties>
+        <altReleaseDeploymentRepository>emergent-local::file:///tmp/test-deploy-repos/releases/</altReleaseDeploymentRepository>
+        <altSnapshotDeploymentRepository>emergent-local::file:///tmp/test-deploy-repos/snapshots/</altSnapshotDeploymentRepository>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>emergent-local-repositories</id>
+      <repositories>
+        <repository>
+          <id>emergent-local-releases</id>
+          <url>file:///tmp/test-deploy-repos/releases/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+          <id>emergent-local-snapshots</id>
+          <url>file:///tmp/test-deploy-repos/snapshots/</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
+
+  </profiles>
+
+</settings>

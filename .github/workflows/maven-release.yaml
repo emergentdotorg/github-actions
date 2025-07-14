@@ -20,6 +20,10 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
+      disable-versioner:
+        description: 'Disable versioner'
+        type: boolean
+        default: false
 
 jobs:
   release:
@@ -86,4 +90,5 @@ jobs:
           deploy-actor: ${{ steps.resolve_vars.outputs.deploy-actor }}
           deploy-token: ${{ steps.resolve_vars.outputs.deploy-token }}
           deploy-server: ${{ inputs.deploy-server }}
+          disable-versioner: ${{ inputs.disable-versioner }}
 

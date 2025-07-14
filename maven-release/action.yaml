@@ -48,7 +48,7 @@ runs:
         fetch-tags: true
         token: ${{ inputs.github-token }}
 
-    - uses: ./git-init-user
+    - uses: emergentdotorg/github-actions/git-init-user@main
 
     - shell: bash
       id: resolve_paths

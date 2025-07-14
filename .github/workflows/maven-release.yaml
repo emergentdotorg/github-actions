@@ -75,7 +75,7 @@ jobs:
 
       - name: Maven Release
         id: maven_release
-        uses: ./maven-release
+        uses: emergentdotorg/github-actions/maven-release@main
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}

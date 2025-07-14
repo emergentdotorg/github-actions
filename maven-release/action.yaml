@@ -138,11 +138,13 @@ runs:
         TAG_PREFIX: ${{ inputs.tag-prefix }}
       # language="shell script"
       run: |
-        mvn --non-recursive \
-          "-Dtag.failWhenTagExist=true" \
-          "-Dtag.messagePattern=Release version %v" \
-          "-Dtag.namePattern=${TAG_PREFIX}%v" \
-          git-versioner:tag
+        declare -a _args=( --non-recursive "-e"  "--batch-mode" "--no-transfer-progress" )
+        if [ -n "${MAVEN_PROFILES}" ]; then _args+=( "-P${MAVEN_PROFILES}" ) ; fi
+        _args+=( "-s" "${MAVEN_USER_SETTINGS}" )
+        _args+=( "-Dtag.failWhenTagExist=true" )
+        _args+=( "-Dtag.messagePattern=Release version %v" )
+        _args+=( "-Dtag.namePattern=${TAG_PREFIX}%v" )
+        mvn "${_args[@]}" org.emergent.maven:git-versioner-maven-plugin:0.12.0:tag
 
     - shell: bash
       env:

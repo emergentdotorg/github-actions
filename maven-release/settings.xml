@@ -70,6 +70,12 @@
 
     <profile>
       <id>emergent-nexus-repositories</id>
+      <activation>
+        <property>
+          <name>env.DEPLOY_SERVER</name>
+          <value>emergent-nexus</value>
+        </property>
+      </activation>
       <repositories>
         <repository>
           <id>emergent-nexus-releases</id>
@@ -84,6 +90,20 @@
           <snapshots><enabled>true</enabled></snapshots>
         </repository>
       </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>emergent-nexus-releases</id>
+          <url>https://nexus.emergent.org/repository/maven-releases/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+        <pluginRepository>
+          <id>emergent-nexus-snapshots</id>
+          <url>https://nexus.emergent.org/repository/maven-snapshots/</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
     </profile>
 
     <!-- emergent-github distmgt & repositories

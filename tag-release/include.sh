@@ -11,7 +11,7 @@ setVersionTagSimple() {
     echo "Error tag is blank"
     exit 1
   fi
-  git tag __version
+  git tag -f "${__version}"
   # If we have a remote, we push there
   local __remotes=$(git remote)
   if [[ -n $__remotes ]]; then

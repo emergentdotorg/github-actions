@@ -80,7 +80,7 @@ jobs:
       - name: Maven Release with Plugin
         if: ${{ inputs.use-release-plugin }}
         id: maven_release_with_plugin
-        uses: emergentdotorg/github-actions/maven-release-classic@main
+        uses: emergentdotorg/github-actions/maven-release-classic@v3
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}
@@ -95,7 +95,7 @@ jobs:
       - name: Maven Release sans Plugin
         if: ${{ ! inputs.use-release-plugin }}
         id: maven_release_sans_plugin
-        uses: emergentdotorg/github-actions/maven-release-gitver@main
+        uses: emergentdotorg/github-actions/maven-release-gitver@v3
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}

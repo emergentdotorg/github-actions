@@ -2,6 +2,32 @@
 
 SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
 echo "SCRIPTDIR=${SCRIPTDIR}"
+GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-${SCRIPTDIR}}"
+echo "GITHUB_ACTION_PATH=${GITHUB_ACTION_PATH}"
+
+setVersionTagSimple() {
+  local __version="$1"
+  if [ -z "${__version}" ]; then
+    echo "Error tag is blank"
+    exit 1
+  fi
+  git tag __version
+  # If we have a remote, we push there
+  local __remotes=$(git remote)
+  if [[ -n $__remotes ]]; then
+    for __remote in $__remotes; do
+      git push $__remote $__version > /dev/null
+      if [ $? -eq 0 ]; then
+        echo "$__version pushed to $__remote"
+      else
+        echo "Error pushing the tag $__version to $__remote"
+        exit 1
+      fi
+    done
+  else
+    echo "$__version"
+  fi
+}
 
 getNextTagVersion() {
   SCOPE="$1"
@@ -9,14 +35,14 @@ getNextTagVersion() {
     SCOPE="auto"
   fi
   # We get the next version, without tagging
-  nextversion="$( source "${SCRIPTDIR}/semtag" final -fos "$SCOPE" )"
+  nextversion="$( source "${GITHUB_ACTION_PATH}/semtag" final -fos "$SCOPE" )"
   echo "$nextversion"
 }
 
 setNextTagVersion() {
   nextversion="$1"
   # We update the tag with the new version
-  output="$( source "${SCRIPTDIR}/semtag" final -v "$nextversion" )"
+  output="$( source "${GITHUB_ACTION_PATH}/semtag" final -v "$nextversion" )"
   rt=$? ; echo "${output}" ; [[ $rt -eq 0 ]] || exit $rt
 }
 

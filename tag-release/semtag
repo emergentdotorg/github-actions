@@ -644,7 +644,9 @@ function get_current {
     local __buildinfo="$(git rev-parse --short HEAD)"
     local __currentbranch="$(git rev-parse --abbrev-ref HEAD | cut -c1-$MAX_BRANCH_LENGTH)"
     get_default_branch default_branch
-    if [ "$__currentbranch" != "master" ]; then
+
+    #was checking against master
+    if [ "$__currentbranch" != "${default_branch:-master}" ]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
 

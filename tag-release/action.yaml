@@ -46,7 +46,7 @@ runs:
 
     - shell: bash
       id: tag_major
-      if: ${{ input.sync-major-tag && success() }}
+      if: ${{ inputs.sync-major-tag && success() }}
       env:
         NEXT_VERSION: ${{ steps.tag_next.outputs.next_version }}
         GITHUB_WORKSPACE: ${{ github.workspace }}

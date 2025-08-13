@@ -1,5 +1,16 @@
 #!/usr/bin/bash
 
+getSemverTool() {
+  destdir="$1"
+  if [ -z "${destdir}" ]; then
+    destdir="."
+  fi
+  destfile="${destdir}/semver"
+  wget -O $destfile https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
+  chmod +x $destfile
+  $destfile --version
+}
+
 catIfExists() {
   if [ -f "$1" ]; then
     cat "$1"

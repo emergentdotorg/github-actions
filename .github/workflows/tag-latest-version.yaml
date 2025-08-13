@@ -1,0 +1,60 @@
+name: Tag Latest Version
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      TAG_PREFIX: 'v'
+    steps:
+
+      - name: Checkout Sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+          ref: ${{ env.COMMIT_SHA }}
+
+      - uses: emergentdotorg/github-actions/git-init-user@main
+
+      - name: Tag Latest
+        id: tag_latest
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          fetch_all_tags: true
+          github_token: ${{ env.GH_TOKEN }}
+          commit_sha: ${{ env.COMMIT_SHA }}
+          tag_prefix: ${{ env.TAG_PREFIX }}
+
+      - name: Update Major Version Tag
+        id: tag_major
+        shell: bash
+        if: ${{ success() }}
+        env:
+          NEW_VERSION: ${{ steps.tag_latest.outputs.new_version }}
+        # language="shell script"
+        run: |
+          MAJOR_VERSION="${NEW_VERSION%%.*}"
+          MAJOR_TAG="${TAG_PREFIX}${MAJOR_VERSION}"
+          if [ -n "${MAJOR_VERSION}" ] ; then
+            git tag -fa "${MAJOR_TAG}" -m ' [no ci] Update major version tag'
+            git push origin "${MAJOR_TAG}" --force
+          fi
+          printf '%s\n' \
+            "major_version=${MAJOR_VERSION}" \
+            "major_version_tag=${MAJOR_TAG}" \
+            >> $GITHUB_OUTPUT

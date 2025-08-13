@@ -11,12 +11,14 @@ setVersionTagSimple() {
     echo "Error tag is blank"
     exit 1
   fi
-  git tag -f "${__version}"
+  
+  #  git tag -fa "${MAJOR_TAG}" -m 'Update major version tag'
+  git tag -f $__version
   # If we have a remote, we push there
   local __remotes=$(git remote)
   if [[ -n $__remotes ]]; then
     for __remote in $__remotes; do
-      git push $__remote $__version > /dev/null
+      git push $__remote $__version --force > /dev/null
       if [ $? -eq 0 ]; then
         echo "$__version pushed to $__remote"
       else

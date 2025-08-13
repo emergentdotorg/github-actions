@@ -1,0 +1,57 @@
+name: 'Tag Next Version'
+description: 'Release using semtag tool'
+outputs:
+  release_version:
+    description: "The released version"
+    value: ${{ steps.tag_next.outputs.next_version }}
+  release_version_tag:
+    description: "The released version tag"
+    value: ${{ steps.tag_next.outputs.next_version_tag }}
+inputs:
+  github-actor:
+    description: "Required for permission to tag the repo."
+    default: ${{ github.actor }}
+  github-token:
+    description: "Required for permission to tag the repo."
+    default: ${{ github.token }}
+  sync-major-tag:
+    description: "Update with an additonal major versiopn tag."
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        token: ${{ inputs.github-token }}
+
+    - uses: emergentdotorg/github-actions/git-init-user@main
+
+    - shell: bash
+      id: tag_next
+      env:
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      # language="shell script"
+      run: |
+        next_version="$( source "${GITHUB_ACTION_PATH}/semtag" final -pfos "auto" )"
+        next_version_tag="v${next_version}"
+        printf '%s\n' \
+          "next_version=${next_version}" \
+          "next_version_tag=${next_version_tag}" \
+          >> $GITHUB_OUTPUT
+        output="$( source "${GITHUB_ACTION_PATH}/semtag" final -v "${next_version_tag}" )"
+        rt=$? ; echo "${output}" ; [[ $rt -eq 0 ]] || exit $rt
+
+    - shell: bash
+      id: tag_major
+      if: ${{ input.sync-major-tag && success() }}
+      env:
+        NEXT_VERSION: ${{ steps.tag_next.outputs.next_version }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      # language="shell script"
+      run: |
+        . "${GITHUB_ACTION_PATH}/include.sh"
+        major_version="${NEXT_VERSION%%.*}"
+        setVersionTagSimple "v${major_version}"

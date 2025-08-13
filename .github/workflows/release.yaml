@@ -1,11 +1,9 @@
-name: Tag and Release
+name: Release by Tag Only
 
 on:
   workflow_dispatch:
-    branches:
-      - main
     inputs:
-      default-bump:
+      change-type:
         description: 'Version change type'
         type: choice
         required: false
@@ -36,30 +34,30 @@ on:
         default: 'v'
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
 
       - uses: actions/checkout@v4
+        with:
+          token: ${{ env.GH_TOKEN }}
 
-      - name: Setup Git User
-        shell: bash
-        # language="shell script"
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+      - uses: emergentdotorg/github-actions/git-init-user@main
 
-      - name: Increment and Tag Version
+      - name: Tag Latest
         id: tag_latest
         uses: mathieudutour/github-tag-action@v6.2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: ${{ inputs.default-bump }}
+          dry_run: ${{ inputs.dry-run }}
+          github_token: ${{ env.GH_TOKEN }}
+          default_bump: ${{ inputs.change-type }}
           # custom_tag: ${{ inputs.custom-tag }}
           create_annotated_tag: ${{ inputs.tag-annotated }}
           tag_prefix: ${{ inputs.tag-prefix }}
 
-      - name: Create a GitHub Release
+      - name: Create GitHub Release
         id: create_release
         if: ${{ ! inputs.dry-run && inputs.create-release }}
         uses: ncipollo/release-action@v1

@@ -6,7 +6,7 @@ on:
     outputs:
       version:
         description: "The new release version"
-        value: ${{ jobs.release.outputs.version }}
+        value: ${{ jobs.release.outputs.release_version }}
     inputs:
       java-version:
         description: 'JDK version to build with'
@@ -20,17 +20,17 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
-      disable-versioner:
-        description: 'Disable versioner'
+      use-release-plugin:
+        description: 'Whether to use the release plugin or try a modern process'
         type: boolean
-        default: false
+        default: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
     # Map the job outputs to step outputs
     outputs:
-      version: ${{ steps.maven_release.outputs.version }}
+      release_version: ${{ steps.resolve_version.outputs.release_version }}
     permissions:
       # Give the default GITHUB_TOKEN write permission to commit and push the
       # added or changed files to the repository.
@@ -73,23 +73,54 @@ jobs:
               ;;
           esac
           printf '%s\n' \
-            "deploy-actor=${DEPLOY_ACTOR}" \
-            "deploy-token=${DEPLOY_TOKEN}" \
+            "deploy_actor=${DEPLOY_ACTOR}" \
+            "deploy_token=${DEPLOY_TOKEN}" \
             >> $GITHUB_OUTPUT
 
-      - name: Maven Release
-        id: maven_release
-        uses: emergentdotorg/github-actions/maven-release@main
+      - name: Maven Release with Plugin
+        if: ${{ inputs.use-release-plugin }}
+        id: maven_release_with_plugin
+        uses: emergentdotorg/github-actions/maven-release-classic@devel
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}
           github-actor: ${{ github.actor }}
           github-token: ${{ github.token }}
+          deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
+          deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
+          deploy-server: ${{ inputs.deploy-server }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
           gpg-private-key: ${{ secrets.maven_gpg_private_key }}
-          deploy-actor: ${{ steps.resolve_vars.outputs.deploy-actor }}
-          deploy-token: ${{ steps.resolve_vars.outputs.deploy-token }}
+
+      - name: Maven Release sans Plugin
+        if: ${{ ! inputs.use-release-plugin }}
+        id: maven_release_sans_plugin
+        uses: emergentdotorg/github-actions/maven-release-gitver@devel
+        with:
+          java-version: ${{ inputs.java-version }}
+          maven-profiles: ${{ inputs.maven-profiles }}
+          github-actor: ${{ github.actor }}
+          github-token: ${{ github.token }}
+          deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
+          deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
           deploy-server: ${{ inputs.deploy-server }}
-          disable-versioner: ${{ inputs.disable-versioner }}
+          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
 
-
+      - name: Resolve Version
+        id: resolve_version
+        shell: bash
+        env:
+          USE_RELEASE_PLUGIN: ${{ inputs.use-release-plugin }}
+          SANS_VERSION: ${{ steps.maven_release_sans_plugin.outputs.version }}
+          WITH_VERSION: ${{ steps.maven_release_with_plugin.outputs.version }}
+        # language="shell script"
+        run: |
+          if [[ "${USE_RELEASE_PLUGIN}" = "true" ]]; then
+            RELEASE_VERSION="${WITH_VERSION}"
+          else
+            RELEASE_VERSION="${SANS_VERSION}"
+          fi
+          printf '%s\n' \
+            "release_version=${RELEASE_VERSION}" \
+            >> $GITHUB_OUTPUT

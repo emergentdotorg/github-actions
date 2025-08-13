@@ -1,22 +1,29 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 
-SCOPE="$1"
+SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
+echo "SCRIPTDIR=${SCRIPTDIR}"
 
-if [ -z "$SCOPE" ]; then
-  SCOPE="auto"
-fi
+getNextTagVersion() {
+  SCOPE="$1"
+  if [ -z "$SCOPE" ]; then
+    SCOPE="auto"
+  fi
+  # We get the next version, without tagging
+  nextversion="$( source "${SCRIPTDIR}/semtag" final -fos "$SCOPE" )"
+  echo "$nextversion"
+}
 
-echo "Using scope $SCOPE"
+setNextTagVersion() {
+  nextversion="$1"
+  # We update the tag with the new version
+  output="$( source "${SCRIPTDIR}/semtag" final -v "$nextversion" )"
+  rt=$? ; echo "${output}" ; [[ $rt -eq 0 ]] || exit $rt
+}
 
-# We get the next version, without tagging
-echo "Getting next version"
-nextversion="$(source semtag final -fos $SCOPE)"
-echo "Publishing with version: $nextversion"
-
-updateFiles() {
+replaceNextTagVersion() {
   # We replace the placeholder in the source with the new version
   replace="s/^PROG_VERSION=\"[^\"]*\"/PROG_VERSION=\"$nextversion\"/g"
-  sed -i.bak $replace semtag
+  sed -i.bak "$replace" semtag
   # We replace the version in the README file with the new version
   replace="s/^\[Version: [^[]*]/[Version: $nextversion]/g"
   sed -i.bak "$replace" README.md
@@ -41,5 +48,4 @@ updateFiles() {
   fi
 }
 
-# We update the tag with the new version
-source semtag final -f -v $nextversion
+

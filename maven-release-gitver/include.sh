@@ -1,4 +1,6 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
+
+#SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
 
 getSemverTool() {
   destdir="$1"

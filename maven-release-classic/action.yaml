@@ -48,7 +48,7 @@ runs:
         fetch-tags: true
         token: ${{ inputs.github-token }}
 
-    - uses: emergentdotorg/github-actions/git-init-user@main
+    - uses: emergentdotorg/github-actions/git-init-user@v3
 
     - shell: bash
       id: resolve_vars

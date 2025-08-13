@@ -5,6 +5,26 @@ echo "SCRIPTDIR=${SCRIPTDIR}"
 GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-${SCRIPTDIR}}"
 echo "GITHUB_ACTION_PATH=${GITHUB_ACTION_PATH}"
 
+
+# Try to programmatically fetch the default branch. Go by the first remote HEAD found, otherwise
+# default to `master`. $1 The variable to store the result
+function get_default_branch {
+  local __result=$1
+  local __remotes=$(git remote)
+  if [[ -n $__remotes ]]; then
+    for __remote in $__remotes; do
+      local __default_branch_ref=$(git symbolic-ref --quiet refs/remotes/${__remote}/HEAD || true)
+      local __default_branch=${__default_branch_ref#refs/remotes/${__remote}/}
+      if [[ -n ${__default_branch} ]]; then
+        break
+      fi
+    done
+  fi
+
+  eval "${__result}=${__default_branch:-master}"
+}
+
+
 setVersionTagSimple() {
   local __version="$1"
   if [ -z "${__version}" ]; then

@@ -8,7 +8,7 @@ echo "GITHUB_ACTION_PATH=${GITHUB_ACTION_PATH}"
 
 # Try to programmatically fetch the default branch. Go by the first remote HEAD found, otherwise
 # default to `master`. $1 The variable to store the result
-function get_default_branch {
+function get_default_branchmf {
   local __result=$1
   local __remotes=$(git remote)
   if [[ -n $__remotes ]]; then

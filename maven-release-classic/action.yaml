@@ -96,19 +96,11 @@ runs:
 
     - uses: actions/setup-java@v4
       with:
-        #settings-path: ${{ github.workspace }}
         server-id: ${{ inputs.deploy-server }}
         server-username: DEPLOY_ACTOR
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: "${{ env.JAVA_SDK_VERSIONS }}"
-        #mvn-toolchain-id: "${{ steps.resolve_vars.outputs.maven_toolchain_ids }}"
-
-    #- uses: actions/setup-java@v4
-    #  with:
-    #    overwrite-settings: 'false'
-    #    distribution: 'temurin'
-    #    java-version: ${{ inputs.java-version }}
 
     - uses: stCarolas/setup-maven@v5
       with:
@@ -161,11 +153,11 @@ runs:
         mvnArgs_+=( "-Darguments=${argArgs_[*]}" )
         mvnArgs_+=( "-DpushChanges=false" )
         mvnArgs_+=( "-DlocalCheckout=true" )
-        mvnArgs_+=( "-DtagNameFormat=@{project.version}" )
+        mvnArgs_+=( "-DtagNameFormat=v@{project.version}" )
         mvnArgs_+=( "-DscmCommentPrefix=[GitHub] " )
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${mvnArgs_[@]}" release:prepare release:perform
 
     - shell: bash
-      if: ${{ ! inputs.dry-run && success() }}
+      if: ${{ success() }}
       # language="shell script"
-      run: git push --tags --atomic
+      run: ${EXECMD_PREFIX} git push --tags --atomic

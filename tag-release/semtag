@@ -1,4 +1,4 @@
-#!/usr/bin/bash -ex
+#!/usr/bin/bash
 
 PROG=semtag
 PROG_VERSION="v0.1.2"

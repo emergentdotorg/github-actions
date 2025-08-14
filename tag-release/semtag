@@ -98,8 +98,8 @@ while getopts "v:s:ofp" opt; do
   esac
 done
 
-# Try to programmatically fetch the default branch. Go by the first remote HEAD found, otherwise default to `master`.
-# $1 The variable to store the result
+# Try to programmatically fetch the default branch. Go by the first remote HEAD found,
+# otherwise default to `main`. $1 The variable to store the result
 function get_default_branch {
   local __result=$1
 
@@ -114,7 +114,10 @@ function get_default_branch {
     done
   fi
 
-  eval "${__result}=${__default_branch:-master}"
+
+  fallback_default_branch="${DEFAULT_BRANCH:-main}"
+  # TODO handle both master and main in the fallback
+  eval "${__result}=${__default_branch:-${fallback_default_branch}}"
 }
 
 # Gets a string with the version and returns an array of maximum size of 5 with all the parts of the sematinc version
@@ -645,8 +648,8 @@ function get_current {
     local __currentbranch="$(git rev-parse --abbrev-ref HEAD | cut -c1-$MAX_BRANCH_LENGTH)"
     get_default_branch default_branch
 
-    #was checking against master
-    if [ "$__currentbranch" != "${default_branch:-master}" ]; then
+    # TODO figure out how to handle main and master
+    if [ "$__currentbranch" != "${default_branch:-${DEFAULT_BRANCH:-main}}" ]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
 

@@ -101,9 +101,7 @@ runs:
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: "${{ steps.resolve_vars.outputs.java_sdk_versions }}"
-        mvn-toolchain-id: "${{ steps.resolve_vars.outputs.maven_toolchain_ids }}"
-        #java-version: "8\n11\n17"
-        #mvn-toolchain-id: "temurin_8\ntemurin_11\ntemurin_17"
+        #mvn-toolchain-id: "${{ steps.resolve_vars.outputs.maven_toolchain_ids }}"
 
     #- uses: actions/setup-java@v4
     #  with:

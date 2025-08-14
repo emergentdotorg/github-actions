@@ -24,17 +24,15 @@ catIfExists() {
 calcJavaVers() {
   jdkver="$1"
   prefix="$2"
-  printf '['
-  local valsep=""
   for ver in 8 11 17 21 ; do
     if [[ $ver -le $jdkver ]]; then
-      printf '%s"%s%s"' "$valsep" "$prefix" "$ver"
-      if [[ -z "${valsep}" ]]; then
-        valsep=", "
+      if [[ "${ver}" != "8" ]]; then
+        printf '\\n'
       fi
+      printf '%s%s' "$prefix" "$ver"
     fi
   done
-  printf ']\n'
+  printf '\n'
 }
 
 testCalcJavaVers() {
@@ -45,4 +43,4 @@ testCalcJavaVers() {
   echo MVN_TOOLCHAIN_IDS="${MVN_TOOLCHAIN_IDS}"
 }
 
-"$@"
+#"$@"

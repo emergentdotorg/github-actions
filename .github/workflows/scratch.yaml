@@ -73,16 +73,18 @@ jobs:
           server-username: DEPLOY_ACTOR
           server-password: DEPLOY_TOKEN
           distribution: 'temurin'
-          java-version: |
-            8
-            11
-            17
-            21
-          mvn-toolchain-id: |
-            temurin_8
-            temurin_11
-            temurin_17
-            temurin_21
+          java-version: "8\n11\n17"
+          #mvn-toolchain-id: "temurin_8\ntemurin_11\ntemurin_17"
+          #java-version: |
+          #  8
+          #  11
+          #  17
+          #  21
+          #mvn-toolchain-id: |
+          #  temurin_8
+          #  temurin_11
+          #  temurin_17
+          #  temurin_21
 
       - uses: stCarolas/setup-maven@v5
         if: ${{ inputs.op == 'setup-java' }}

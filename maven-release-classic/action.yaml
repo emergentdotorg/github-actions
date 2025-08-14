@@ -76,7 +76,11 @@ runs:
         declare -a _profiles=( ${MAVEN_PROFILES} )
         ACTIVATED_PROFILES=$(IFS=, ; echo "${_profiles[*]}")
         # Build the list of SDKs to install as a JSON array
+        JAVA_SDK_VERSIONS="$( calcJavaVers "${JAVA_VERSION}" '' )"
+        MAVEN_TOOLCHAIN_IDS="$( calcJavaVers "${JAVA_VERSION}" 'temurin_' )"
         printf '%s\n' \
+          "java_sdk_versions=${JAVA_SDK_VERSIONS}" \
+          "maven_toolchain_ids=${MAVEN_TOOLCHAIN_IDS}" \
           "activated_profiles=${ACTIVATED_PROFILES}" \
           "user_settings_file=${USER_SETTINGS_FILE}" \
           "user_toolchains_file=${USER_TOOLCHAINS_FILE}" \
@@ -96,8 +100,10 @@ runs:
         server-username: DEPLOY_ACTOR
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
-        java-version: "8\n11\n17"
-        mvn-toolchain-id: "temurin_8\ntemurin_11\ntemurin_17"
+        java-version: "${{ steps.resolve_vars.outputs.java_sdk_versions }}"
+        mvn-toolchain-id: "${{ steps.resolve_vars.outputs.maven_toolchain_ids }}"
+        #java-version: "8\n11\n17"
+        #mvn-toolchain-id: "temurin_8\ntemurin_11\ntemurin_17"
 
     #- uses: actions/setup-java@v4
     #  with:

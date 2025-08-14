@@ -95,7 +95,7 @@ jobs:
       - name: Maven Release sans Plugin
         if: ${{ inputs.use-release-plugin != true }}
         id: maven_release_sans_plugin
-        uses: emergentdotorg/github-actions/maven-release-gitver@v3
+        uses: emergentdotorg/github-actions/semver-maven-release@v3
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}

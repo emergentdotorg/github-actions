@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 
-#SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
+SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
+GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-${SCRIPTDIR}}"
 
 getSemverTool() {
   destdir="$1"
@@ -21,20 +22,25 @@ catIfExists() {
   fi
 }
 
+getReleaseVersion() {
+  local __result=$1
+  next_version="$( source "${GITHUB_ACTION_PATH}/semtag" final -pfos "auto" )"
+  eval "${__result}=${next_version}"
+}
+
+setVersionTag() {
+  local version_tag="$1"
+  "${GITHUB_ACTION_PATH}"/semtag final -v "${version_tag}"
+}
+
 calcJavaVers() {
   jdkver="$1"
   prefix="$2"
-  printf '['
-  local valsep=""
   for ver in 8 11 17 21 ; do
     if [[ $ver -le $jdkver ]]; then
-      printf '%s"%s%s"' "$valsep" "$prefix" "$ver"
-      if [[ -z "${valsep}" ]]; then
-        valsep=", "
-      fi
+      printf '%s%s\n' "$prefix" "$ver"
     fi
   done
-  printf ']\n'
 }
 
 testCalcJavaVers() {
@@ -45,4 +51,4 @@ testCalcJavaVers() {
   echo MVN_TOOLCHAIN_IDS="${MVN_TOOLCHAIN_IDS}"
 }
 
-"$@"
+#"$@"

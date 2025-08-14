@@ -1,6 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 
-#SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
+SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
+GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-${SCRIPTDIR}}"
 
 getSemverTool() {
   destdir="$1"

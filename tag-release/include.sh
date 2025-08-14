@@ -1,9 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 
 SCRIPTDIR="$(unset CDPATH && cd "`dirname "$0"`" && pwd)"
-echo "SCRIPTDIR=${SCRIPTDIR}"
 GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-${SCRIPTDIR}}"
-echo "GITHUB_ACTION_PATH=${GITHUB_ACTION_PATH}"
 
 
 # Try to programmatically fetch the default branch. Go by the first remote HEAD found, otherwise

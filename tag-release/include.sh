@@ -21,7 +21,7 @@ function get_default_branchmf {
     done
   fi
 
-  eval "${__result}=${__default_branch:-master}"
+  eval "${__result}=${__default_branch:-main}"
 }
 
 

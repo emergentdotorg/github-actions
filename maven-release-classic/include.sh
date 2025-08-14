@@ -26,13 +26,9 @@ calcJavaVers() {
   prefix="$2"
   for ver in 8 11 17 21 ; do
     if [[ $ver -le $jdkver ]]; then
-      if [[ "${ver}" != "8" ]]; then
-        printf '\\n'
-      fi
-      printf '%s%s' "$prefix" "$ver"
+      printf '%s%s\n' "$prefix" "$ver"
     fi
   done
-  printf '\n'
 }
 
 testCalcJavaVers() {

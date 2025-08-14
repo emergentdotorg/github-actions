@@ -89,7 +89,7 @@ runs:
 
     - uses: actions/setup-java@v4
       with:
-        settings-path: ${{ github.workspace }}
+        #settings-path: ${{ github.workspace }}
         server-id: ${{ inputs.deploy-server }}
         server-username: DEPLOY_ACTOR
         server-password: DEPLOY_TOKEN

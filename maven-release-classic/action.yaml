@@ -56,6 +56,7 @@ runs:
         DRY_RUN: ${{ inputs.dry-run }}
         JAVA_VERSION: ${{ inputs.java-version }}
         MAVEN_PROFILES: ${{ inputs.maven-profiles }}
+        DEPLOY_SERVER: ${{ inputs.deploy-server }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
         SETTINGS_DIR: '~/.m2'
       # language="shell script"
@@ -82,6 +83,7 @@ runs:
           >> $GITHUB_OUTPUT
         printf '%s\n' \
           "EXECMD_PREFIX=${EXECMD_PREFIX}" \
+          "DEPLOY_SERVER=${DEPLOY_SERVER}" \
           "ACTIVATED_PROFILES=${ACTIVATED_PROFILES}" \
           "USER_SETTINGS_FILE=${USER_SETTINGS_FILE}" \
           "USER_TOOLCHAINS_FILE=${USER_TOOLCHAINS_FILE}" \

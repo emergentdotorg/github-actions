@@ -91,6 +91,8 @@ jobs:
 
       - shell: bash
         if: ${{ inputs.op == 'setup-java' }}
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
         # language="shell script"
         run: |
           catIfExists() {
@@ -107,5 +109,7 @@ jobs:
           echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
           echo "JAVA_HOME_21_X64: $JAVA_HOME_21_X64"
           mvn -version
-          catIfExists "${USER_SETTINGS_FILE}"
-          catIfExists "${USER_TOOLCHAINS_FILE}"
+          catIfExists "${GITHUB_WORKSPACE}/settings.xml"
+          catIfExists "${GITHUB_WORKSPACE}/toolchains.xml"
+          catIfExists "${HOME}/.m2/settings.xml"
+          catIfExists "${HOME}/.m2/toolchains.xml"

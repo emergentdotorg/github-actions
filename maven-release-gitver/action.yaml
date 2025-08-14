@@ -187,7 +187,6 @@ runs:
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${_mvnArgs[@]}" deploy
 
     - shell: bash
-      if: ! inputs.dry-run && success()
+      if: ${{ success() }}
       # language="shell script"
-      run: |
-        git push --follow-tags --atomic
+      run: ${EXECMD_PREFIX} git push --follow-tags --atomic

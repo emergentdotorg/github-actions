@@ -25,34 +25,74 @@ jobs:
         id: dump_context
         uses: emergentdotorg/github-actions/dump-context@v2
 
-      - name: Setup Java
-        id: setup_java
-        if: ${{ inputs.op == 'setup-java' }}
-        uses: emergentdotorg/github-actions/setup-java-env@v2
-        with:
-          deploy-server: 'central'
-          deploy-username-env: CENTRAL_ACTOR
-          deploy-password-env: CENTRAL_TOKEN
-          github-username-env: GITHUB_ACTOR
-          github-password-env: GITHUB_TOKEN
-          gpg-passphrase-env: GPG_PASSPHRASE
-          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+      #- name: Setup Java
+      #  id: setup_java
+      #  if: ${{ inputs.op == 'setup-java' }}
+      #  uses: emergentdotorg/github-actions/setup-java-env@v2
+      #  with:
+      #    deploy-server: 'central'
+      #    deploy-username-env: CENTRAL_ACTOR
+      #    deploy-password-env: CENTRAL_TOKEN
+      #    github-username-env: GITHUB_ACTOR
+      #    github-password-env: GITHUB_TOKEN
+      #    gpg-passphrase-env: GPG_PASSPHRASE
+      #    gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+      #
+      #- name: 'Verify Java and Maven'
+      #  if: ${{ inputs.op == 'setup-java' && success() }}
+      #  shell: bash
+      #  env:
+      #    USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
+      #    USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
+      #    GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
+      #  # language="shell script"
+      #  run: |
+      #    java -version
+      #    echo "JAVA_HOME: $JAVA_HOME"
+      #    echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+      #    echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+      #    echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+      #    mvn -version
+      #    catIfExists() {
+      #      if [ -f "$1" ]; then
+      #        cat "$1"
+      #      else
+      #        echo "WARNING: File $1 does not exist"
+      #      fi
+      #    }
+      #    catIfExists "${USER_SETTINGS}"
+      #    catIfExists "${GLOBAL_SETTINGS}"
+      #    catIfExists "${USER_TOOLCHAINS}"
+      #    catIfExists ${{ github.workspace }}/.git/config
 
-      - name: 'Verify Java and Maven'
-        if: ${{ inputs.op == 'setup-java' && success() }}
-        shell: bash
-        env:
-          USER_SETTINGS: ${{ steps.setup_java.outputs.user-settings }}
-          USER_TOOLCHAINS: ${{ steps.setup_java.outputs.user-toolchains }}
-          GLOBAL_SETTINGS: ${{ steps.setup_java.outputs.global-settings }}
+      - uses: actions/setup-java@v4
+        if: ${{ inputs.op == 'setup-java' }}
+        with:
+          settings-path: ${{ github.workspace }}
+          server-id: central
+          server-username: DEPLOY_ACTOR
+          server-password: DEPLOY_TOKEN
+          distribution: 'temurin'
+          java-version: |
+            8
+            11
+            17
+            21
+          mvn-toolchain-id: |
+            temurin_8
+            temurin_11
+            temurin_17
+            temurin_21
+
+      - uses: stCarolas/setup-maven@v5
+        if: ${{ inputs.op == 'setup-java' }}
+        with:
+          maven-version: 3.9.9
+
+      - shell: bash
+        if: ${{ inputs.op == 'setup-java' }}
         # language="shell script"
         run: |
-          java -version
-          echo "JAVA_HOME: $JAVA_HOME"
-          echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
-          echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
-          echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
-          mvn -version
           catIfExists() {
             if [ -f "$1" ]; then
               cat "$1"
@@ -60,7 +100,12 @@ jobs:
               echo "WARNING: File $1 does not exist"
             fi
           }
-          catIfExists "${USER_SETTINGS}"
-          catIfExists "${GLOBAL_SETTINGS}"
-          catIfExists "${USER_TOOLCHAINS}"
-          catIfExists ${{ github.workspace }}/.git/config
+          java -version
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
+          echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
+          echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
+          echo "JAVA_HOME_21_X64: $JAVA_HOME_21_X64"
+          mvn -version
+          catIfExists "${USER_SETTINGS_FILE}"
+          catIfExists "${USER_TOOLCHAINS_FILE}"

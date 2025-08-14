@@ -96,20 +96,14 @@ runs:
         server-username: DEPLOY_ACTOR
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
-        java-version: |
-          8
-          11
-          17
-        mvn-toolchain-id: |
-          temurin_8
-          temurin_11
-          temurin_17
+        java-version: "8\n11\n17"
+        mvn-toolchain-id: "temurin_8\ntemurin_11\ntemurin_17"
 
-    - uses: actions/setup-java@v4
-      with:
-        overwrite-settings: 'false'
-        distribution: 'temurin'
-        java-version: ${{ inputs.java-version }}
+    #- uses: actions/setup-java@v4
+    #  with:
+    #    overwrite-settings: 'false'
+    #    distribution: 'temurin'
+    #    java-version: ${{ inputs.java-version }}
 
     - uses: stCarolas/setup-maven@v5
       with:

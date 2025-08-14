@@ -160,4 +160,4 @@ runs:
     - shell: bash
       if: ${{ success() }}
       # language="shell script"
-      run: ${EXECMD_PREFIX} git push --tags --atomic
+      run: ${EXECMD_PREFIX} git push --follow-tags --atomic

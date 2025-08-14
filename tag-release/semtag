@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -ex
 
 PROG=semtag
 PROG_VERSION="v0.1.2"
@@ -113,7 +113,6 @@ function get_default_branch {
       fi
     done
   fi
-
 
   fallback_default_branch="${DEFAULT_BRANCH:-main}"
   # TODO handle both master and main in the fallback

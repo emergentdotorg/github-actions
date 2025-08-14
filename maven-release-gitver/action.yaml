@@ -58,7 +58,6 @@ runs:
       id: resolve_vars
       env:
         DRY_RUN: ${{ inputs.dry-run }}
-        JAVA_VERSION: ${{ inputs.java-version }}
         MAVEN_PROFILES: ${{ inputs.maven-profiles }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
         SETTINGS_DIR: '~/.m2'
@@ -78,12 +77,7 @@ runs:
         # Convert spaces to commas in the profiles string
         declare -a _profiles=( ${MAVEN_PROFILES} )
         ACTIVATED_PROFILES=$(IFS=, ; echo "${_profiles[*]}")
-        # Build the list of SDKs to install as a JSON array
-        JAVA_SDK_VERSIONS="$( calcJavaVers "${JAVA_VERSION}" '' )"
-        MAVEN_TOOLCHAIN_IDS="$( calcJavaVers "${JAVA_VERSION}" 'temurin_' )"
         printf '%s\n' \
-          "java_sdk_versions=${JAVA_SDK_VERSIONS}" \
-          "maven_toolchain_ids=${MAVEN_TOOLCHAIN_IDS}" \
           "activated_profiles=${ACTIVATED_PROFILES}" \
           "user_settings_file=${USER_SETTINGS_FILE}" \
           "user_toolchains_file=${USER_TOOLCHAINS_FILE}" \
@@ -103,9 +97,19 @@ runs:
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: |
-          ${{ join(fromJSON( steps.resolve_vars.outputs.java_sdk_versions ), '\n') }}
+          8
+          11
+          17
         mvn-toolchain-id: |
-          ${{ join(fromJSON( steps.resolve_vars.outputs.maven_toolchain_ids ), '\n') }}
+          temurin_8
+          temurin_11
+          temurin_17
+
+    - uses: actions/setup-java@v4
+      with:
+        overwrite-settings: 'false'
+        distribution: 'temurin'
+        java-version: ${{ inputs.java-version }}
 
     - uses: stCarolas/setup-maven@v5
       with:

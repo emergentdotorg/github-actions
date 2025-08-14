@@ -156,6 +156,7 @@ runs:
         mvnArgs_+=( "-Darguments=${argArgs_[*]}" )
         mvnArgs_+=( "-DpushChanges=false" )
         mvnArgs_+=( "-DlocalCheckout=true" )
+        mvnArgs_+=( "-DtagNameFormat=@{project.version}" )
         mvnArgs_+=( "-DscmCommentPrefix=[GitHub] " )
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${mvnArgs_[@]}" release:prepare release:perform
 

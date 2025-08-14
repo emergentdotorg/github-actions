@@ -10,8 +10,8 @@ on:
     inputs:
       java-version:
         description: 'JDK version to build with'
-        type: string
-        required: true
+        type: number
+        default: 17
       deploy-server:
         description: 'Maven dist mgmt server-id'
         type: string

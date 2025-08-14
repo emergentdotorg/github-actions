@@ -15,7 +15,7 @@ on:
       deploy-server:
         description: 'Maven dist mgmt server-id'
         type: string
-        required: true
+        default: 'emergent-nexus'
       maven-profiles:
         description: 'Maven profiles to activate, comma-delimited'
         type: string

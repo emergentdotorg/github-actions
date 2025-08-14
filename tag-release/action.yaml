@@ -43,9 +43,9 @@ runs:
           "next_version=${next_version}" \
           "next_version_tag=${next_version_tag}" \
           >> $GITHUB_OUTPUT
-
-        output="$( source "${GITHUB_ACTION_PATH}/semtag" final -v "${next_version_tag}" )"
-        rt=$? ; echo "${output}" ; [[ $rt -eq 0 ]] || exit $rt
+        "${GITHUB_ACTION_PATH}/semtag" final -v "${next_version_tag}"
+        # output="$( source "${GITHUB_ACTION_PATH}/semtag" final -v "${next_version_tag}" )"
+        # rt=$? ; echo "${output}" ; [[ $rt -eq 0 ]] || exit $rt
 
     - shell: bash
       id: tag_major

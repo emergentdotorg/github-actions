@@ -103,9 +103,9 @@ runs:
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: |
-          ${{ join(fromJSON( step.resolve_vars.outputs.java_sdk_versions ), '\n') }}
+          ${{ join(fromJSON( steps.resolve_vars.outputs.java_sdk_versions ), '\n') }}
         mvn-toolchain-id: |
-          ${{ join(fromJSON( step.resolve_vars.outputs.maven_toolchain_ids ), '\n') }}
+          ${{ join(fromJSON( steps.resolve_vars.outputs.maven_toolchain_ids ), '\n') }}
 
     - uses: stCarolas/setup-maven@v5
       with:

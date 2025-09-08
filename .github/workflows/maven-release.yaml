@@ -78,7 +78,7 @@ jobs:
             >> $GITHUB_OUTPUT
 
       - name: Maven Release with GitVer
-        if: ${{ steps.resolve_vars.outputs.gitver_present }}
+        if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
         id: maven_release_with_gitver
         uses: emergentdotorg/github-actions/semver-maven-release@v3
         with:
@@ -93,7 +93,7 @@ jobs:
           gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Maven Release sans GitVer
-        if: ${{ ! steps.resolve_vars.outputs.gitver_present }}
+        if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
         id: maven_release_sans_gitver
         uses: emergentdotorg/github-actions/maven-release-classic@v3
         with:
@@ -111,12 +111,11 @@ jobs:
         id: resolve_version
         shell: bash
         env:
-          GITVER_PRESENT: ${{ steps.resolve_vars.outputs.gitver_present }}
           SANS_GITVER_VERSION: ${{ steps.maven_release_sans_gitver.outputs.version }}
           WITH_GITVER_VERSION: ${{ steps.maven_release_with_gitver.outputs.version }}
         # language="shell script"
         run: |
-          if [ "${GITVER_PRESENT}" = "true" ]; then
+          if [ -n "${WITH_GITVER_VERSION}" ]; then
             RELEASE_VERSION="${WITH_GITVER_VERSION}"
           else
             RELEASE_VERSION="${SANS_GITVER_VERSION}"

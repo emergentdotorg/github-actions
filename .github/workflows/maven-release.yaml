@@ -20,10 +20,6 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
-      use-release-plugin:
-        description: 'Whether to use the release plugin or try a modern process'
-        type: boolean
-        default: true
 
 jobs:
   release:
@@ -72,13 +68,17 @@ jobs:
             *)
               ;;
           esac
+          GITVER_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=gitver.version)"
+          if [ -n "${GITVER_VERSION}" ]; then GITVER_PRESENT=true ; else GITVER_PRESENT=false ; fi
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \
             "deploy_token=${DEPLOY_TOKEN}" \
+            "gitver_present=${GITVER_PRESENT}" \
+            "gitver_version=${GITVER_VERSION}" \
             >> $GITHUB_OUTPUT
 
       - name: Maven Release with Plugin
-        if: ${{ inputs.use-release-plugin == true }}
+        if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
         id: maven_release_with_plugin
         uses: emergentdotorg/github-actions/maven-release-classic@v3
         with:
@@ -93,7 +93,7 @@ jobs:
           gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Maven Release sans Plugin
-        if: ${{ inputs.use-release-plugin != true }}
+        if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
         id: maven_release_sans_plugin
         uses: emergentdotorg/github-actions/semver-maven-release@v3
         with:
@@ -111,15 +111,15 @@ jobs:
         id: resolve_version
         shell: bash
         env:
-          USE_RELEASE_PLUGIN: ${{ inputs.use-release-plugin }}
+          GITVER_PRESENT: ${{ steps.resolve_vars.outputs.gitver_present }}
           SANS_VERSION: ${{ steps.maven_release_sans_plugin.outputs.version }}
           WITH_VERSION: ${{ steps.maven_release_with_plugin.outputs.version }}
         # language="shell script"
         run: |
-          if [[ "${USE_RELEASE_PLUGIN}" = "true" ]]; then
-            RELEASE_VERSION="${WITH_VERSION}"
-          else
+          if [[ "${GITVER_PRESENT}" = "true" ]]; then
             RELEASE_VERSION="${SANS_VERSION}"
+          else
+            RELEASE_VERSION="${WITH_VERSION}"
           fi
           printf '%s\n' \
             "release_version=${RELEASE_VERSION}" \

@@ -47,8 +47,8 @@ jobs:
           DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
           DEPLOY_GITHUB_ACTOR: 'emergentbot'
           DEPLOY_GITHUB_TOKEN: ${{ secrets.emergentbot_deploy_token }}
-          DEPLOY_NEXUS_ACTOR: ${{ secrets.deploy_nexus_actor }}
-          DEPLOY_NEXUS_TOKEN: ${{ secrets.deploy_nexus_token }}
+          DEPLOY_EMERGENT_NEXUS_ACTOR: ${{ secrets.deploy_emergent_nexus_actor }}
+          DEPLOY_EMERGENT_NEXUS_TOKEN: ${{ secrets.deploy_emergent_nexus_token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         # language="shell script"
         run: |
@@ -66,8 +66,8 @@ jobs:
               DEPLOY_TOKEN="${DEPLOY_GITHUB_TOKEN}"
               ;;
             emergent-nexus)
-              DEPLOY_ACTOR="${DEPLOY_NEXUS_ACTOR}"
-              DEPLOY_TOKEN="${DEPLOY_NEXUS_TOKEN}"
+              DEPLOY_ACTOR="${DEPLOY_EMERGENT_NEXUS_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_EMERGENT_NEXUS_TOKEN}"
               ;;
             *)
               ;;

@@ -82,8 +82,8 @@ jobs:
             "github_token=${{ github.token }}"
             "deploy_central_actor=${{ secrets.deploy_central_actor }}"
             "deploy_central_token=${{ secrets.deploy_central_token }}"
-            "deploy_nexus_actor=${{ secrets.deploy_nexus_actor }}"
-            "deploy_nexus_token=${{ secrets.deploy_nexus_token }}"
+            "deploy_emergent_nexus_actor=${{ secrets.deploy_emergent_nexus_actor }}"
+            "deploy_emergent_nexus_token=${{ secrets.deploy_emergent_nexus_token }}"
             "maven_gpg_passphrase=${{ secrets.maven_gpg_passphrase }}"
             "maven_gpg_key=${{ secrets.maven_gpg_key }}"
       - name: Print Output

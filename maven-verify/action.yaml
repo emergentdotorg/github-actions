@@ -25,7 +25,7 @@ runs:
 
     - name: Setup Java Env
       id: setup-env
-      uses: emergentdotorg/github-actions/setup-java-env@v2
+      uses: emergentdotorg/github-actions/setup-java-env@v3
 
     - name: Resolve Values
       id: resolve_values

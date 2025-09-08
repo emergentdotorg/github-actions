@@ -23,12 +23,12 @@ jobs:
       - name: Dump Context Java
         if: ${{ inputs.op == 'dump-context' }}
         id: dump_context
-        uses: emergentdotorg/github-actions/dump-context@v2
+        uses: emergentdotorg/github-actions/dump-context@v3
 
       #- name: Setup Java
       #  id: setup_java
       #  if: ${{ inputs.op == 'setup-java' }}
-      #  uses: emergentdotorg/github-actions/setup-java-env@v2
+      #  uses: emergentdotorg/github-actions/setup-java-env@v3
       #  with:
       #    deploy-server: 'central'
       #    deploy-username-env: CENTRAL_ACTOR

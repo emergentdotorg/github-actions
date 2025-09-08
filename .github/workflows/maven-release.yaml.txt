@@ -36,10 +36,10 @@ jobs:
       version: ${{ steps.resolve_vars.outputs.version }}
     env:
       DEPLOY_SERVER: ${{ inputs.server-id }}
-      # DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || github.actor }}
-      # DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || github.token }}
-      DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.maven_central_actor || 'emergentbot' }}
-      DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.maven_central_token || secrets.emergentbot_deploy_token }}
+      # DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.deploy_central_actor || github.actor }}
+      # DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.deploy_central_token || github.token }}
+      DEPLOY_USERNAME: ${{ inputs.server-id == 'central' && secrets.deploy_central_actor || 'emergentbot' }}
+      DEPLOY_PASSWORD: ${{ inputs.server-id == 'central' && secrets.deploy_central_token || secrets.emergentbot_deploy_token }}
       GPG_PASSPHRASE: ${{ secrets.maven_gpg_passphrase }}
       # GPG_PRIVATE_KEY: ${{ secrets.maven_gpg_key }}
       # RELEASE_PROFILES: ${{ format('emergent-release,{0}-dist', inputs.server-id) }}

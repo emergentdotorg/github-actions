@@ -146,8 +146,8 @@ runs:
         if [ -n "${USER_SETTINGS_FILE}" ] ; then _mvnArgs+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
         if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then _mvnArgs+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi
         _mvnArgs+=( "-DgenerateBackupPoms=false" )
-        _mvnArgs+=( "-processAllModules=true" )
-        _mvnArgs+=( "-newVersion=${RELEASE_VERSION}" )
+        _mvnArgs+=( "-DprocessAllModules=true" )
+        _mvnArgs+=( "-DnewVersion=${RELEASE_VERSION}" )
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${_mvnArgs[@]}" \
           org.codehaus.mojo:versions-maven-plugin:2.18.0:set
         git commit -am "Update pom versions to ${RELEASE_VERSION}"

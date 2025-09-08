@@ -90,7 +90,7 @@ jobs:
           deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
           deploy-server: ${{ inputs.deploy-server }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Maven Release sans Plugin
         if: ${{ inputs.use-release-plugin != true }}
@@ -105,7 +105,7 @@ jobs:
           deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
           deploy-server: ${{ inputs.deploy-server }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-          gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Resolve Version
         id: resolve_version

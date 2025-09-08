@@ -75,7 +75,7 @@ jobs:
           deploy-server: ${{ inputs.deploy-server }}
           #github-token: ${{ github.token }}
           #gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-          #gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+          #gpg-private-key: ${{ secrets.maven_gpg_key }}
           #deploy-actor: ${{ steps.resolve_vars.outputs.deploy-actor }}
           #deploy-token: ${{ steps.resolve_vars.outputs.deploy-token }}
           secrets: |
@@ -85,7 +85,7 @@ jobs:
             "deploy_nexus_actor=${{ secrets.deploy_nexus_actor }}"
             "deploy_nexus_token=${{ secrets.deploy_nexus_token }}"
             "maven_gpg_passphrase=${{ secrets.maven_gpg_passphrase }}"
-            "maven_gpg_private_key=${{ secrets.maven_gpg_private_key }}"
+            "maven_gpg_key=${{ secrets.maven_gpg_key }}"
       - name: Print Output
         id: output
         run: echo "${{ steps.test-action.outputs.time }}"

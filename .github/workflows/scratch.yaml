@@ -36,7 +36,7 @@ jobs:
       #    github-username-env: GITHUB_ACTOR
       #    github-password-env: GITHUB_TOKEN
       #    gpg-passphrase-env: GPG_PASSPHRASE
-      #    gpg-private-key: ${{ secrets.maven_gpg_private_key }}
+      #    gpg-private-key: ${{ secrets.maven_gpg_key }}
       #
       #- name: 'Verify Java and Maven'
       #  if: ${{ inputs.op == 'setup-java' && success() }}

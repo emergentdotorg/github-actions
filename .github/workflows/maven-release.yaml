@@ -77,22 +77,22 @@ jobs:
             "gitver_version=${GITVER_VERSION}" \
             >> $GITHUB_OUTPUT
 
-      - name: Maven Release with GitVer
-        if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
-        id: maven_release_with_gitver
-        uses: emergentdotorg/github-actions/semver-maven-release@v3
-        with:
-          java-version: ${{ inputs.java-version }}
-          maven-profiles: ${{ inputs.maven-profiles }}
-          github-actor: ${{ github.actor }}
-          github-token: ${{ github.token }}
-          deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
-          deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
-          deploy-server: ${{ inputs.deploy-server }}
-          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-          gpg-private-key: ${{ secrets.maven_gpg_key }}
+      #- name: Maven Release with GitVer
+      #  if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
+      #  id: maven_release_with_gitver
+      #  uses: emergentdotorg/github-actions/semver-maven-release@v3
+      #  with:
+      #    java-version: ${{ inputs.java-version }}
+      #    maven-profiles: ${{ inputs.maven-profiles }}
+      #    github-actor: ${{ github.actor }}
+      #    github-token: ${{ github.token }}
+      #    deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
+      #    deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
+      #    deploy-server: ${{ inputs.deploy-server }}
+      #    gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+      #    gpg-private-key: ${{ secrets.maven_gpg_key }}
 
-      - name: Maven Release sans GitVer
+      - name: Maven Release
         if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
         id: maven_release_sans_gitver
         uses: emergentdotorg/github-actions/maven-release-classic@v3

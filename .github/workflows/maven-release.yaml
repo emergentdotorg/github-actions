@@ -93,9 +93,9 @@ jobs:
       #    gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Maven Release
-        if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
+        #if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
         id: maven_release_sans_gitver
-        uses: emergentdotorg/github-actions/maven-release-classic@v3
+        uses: emergentdotorg/github-actions/maven-release@v3
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}

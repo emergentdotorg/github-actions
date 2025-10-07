@@ -78,7 +78,6 @@ jobs:
             >> $GITHUB_OUTPUT
 
       - name: Maven Deploy
-        if: ${{ steps.resolve_vars.outputs.release == 'true' }}
         id: maven_deploy
         uses: emergentdotorg/github-actions/maven-deploy@v3
         with:

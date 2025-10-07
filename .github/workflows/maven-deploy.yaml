@@ -22,7 +22,7 @@ on:
         default: ''
 
 jobs:
-  release:
+  deploy:
     runs-on: ubuntu-latest
     # Map the job outputs to step outputs
     outputs:
@@ -70,29 +70,12 @@ jobs:
           esac
           PROJECT_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
           if [[ $PROJECT_VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
-#          GITVER_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=gitver.version)"
-#          if [[ $GITVER_VERSION =~ "^[A-Za-z0-9_.+-]+$" ]]; then GITVER_PRESENT=true ; else GITVER_PRESENT=false ; fi
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \
             "deploy_token=${DEPLOY_TOKEN}" \
             "project_version=${PROJECT_VERSION}" \
             "release=${RELEASE}" \
             >> $GITHUB_OUTPUT
-
-      #- name: Maven Release with GitVer
-      #  if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
-      #  id: maven_release_with_gitver
-      #  uses: emergentdotorg/github-actions/semver-maven-release@v3
-      #  with:
-      #    java-version: ${{ inputs.java-version }}
-      #    maven-profiles: ${{ inputs.maven-profiles }}
-      #    github-actor: ${{ github.actor }}
-      #    github-token: ${{ github.token }}
-      #    deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
-      #    deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
-      #    deploy-server: ${{ inputs.deploy-server }}
-      #    gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-      #    gpg-private-key: ${{ secrets.maven_gpg_key }}
 
       - name: Maven Deploy
         if: ${{ steps.resolve_vars.outputs.release == 'true' }}

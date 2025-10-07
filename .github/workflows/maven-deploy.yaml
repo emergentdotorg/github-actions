@@ -1,0 +1,110 @@
+name: Reusable Maven Deploy
+
+on:
+  workflow_call:
+    # Map the workflow outputs to job outputs
+    outputs:
+      version:
+        description: "The new release version"
+        value: ${{ jobs.release.outputs.release_version }}
+    inputs:
+      java-version:
+        description: 'JDK version to build with'
+        type: number
+        default: 17
+      deploy-server:
+        description: 'Maven dist mgmt server-id'
+        type: string
+        default: 'emergent-nexus'
+      maven-profiles:
+        description: 'Maven profiles to activate, comma-delimited'
+        type: string
+        default: ''
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Map the job outputs to step outputs
+    outputs:
+      release_version: ${{ steps.maven_deploy.outputs.version }}
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Vars
+        id: resolve_vars
+        shell: bash
+        env:
+          DEPLOY_SERVER: ${{ inputs.deploy-server }}
+          DEPLOY_CENTRAL_ACTOR: ${{ secrets.deploy_central_actor }}
+          DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
+          DEPLOY_GITHUB_ACTOR: 'emergentbot'
+          DEPLOY_GITHUB_TOKEN: ${{ secrets.emergentbot_deploy_token }}
+          DEPLOY_EMERGENT_NEXUS_ACTOR: ${{ secrets.deploy_emergent_nexus_actor }}
+          DEPLOY_EMERGENT_NEXUS_TOKEN: ${{ secrets.deploy_emergent_nexus_token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        # language="shell script"
+        run: |
+          case "${DEPLOY_SERVER}" in
+            central)
+              DEPLOY_ACTOR="${DEPLOY_CENTRAL_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_CENTRAL_TOKEN}"
+              ;;
+            github)
+              DEPLOY_ACTOR="${{ github.actor }}"
+              DEPLOY_TOKEN="${{ github.token }}"
+              ;;
+            emergent-github)
+              DEPLOY_ACTOR="${DEPLOY_GITHUB_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_GITHUB_TOKEN}"
+              ;;
+            emergent-nexus)
+              DEPLOY_ACTOR="${DEPLOY_EMERGENT_NEXUS_ACTOR}"
+              DEPLOY_TOKEN="${DEPLOY_EMERGENT_NEXUS_TOKEN}"
+              ;;
+            *)
+              ;;
+          esac
+          PROJECT_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
+          if [[ $PROJECT_VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
+#          GITVER_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=gitver.version)"
+#          if [[ $GITVER_VERSION =~ "^[A-Za-z0-9_.+-]+$" ]]; then GITVER_PRESENT=true ; else GITVER_PRESENT=false ; fi
+          printf '%s\n' \
+            "deploy_actor=${DEPLOY_ACTOR}" \
+            "deploy_token=${DEPLOY_TOKEN}" \
+            "project_version=${PROJECT_VERSION}" \
+            "release=${RELEASE}" \
+            >> $GITHUB_OUTPUT
+
+      #- name: Maven Release with GitVer
+      #  if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
+      #  id: maven_release_with_gitver
+      #  uses: emergentdotorg/github-actions/semver-maven-release@v3
+      #  with:
+      #    java-version: ${{ inputs.java-version }}
+      #    maven-profiles: ${{ inputs.maven-profiles }}
+      #    github-actor: ${{ github.actor }}
+      #    github-token: ${{ github.token }}
+      #    deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
+      #    deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
+      #    deploy-server: ${{ inputs.deploy-server }}
+      #    gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+      #    gpg-private-key: ${{ secrets.maven_gpg_key }}
+
+      - name: Maven Deploy
+        if: ${{ steps.resolve_vars.outputs.release == 'true' }}
+        id: maven_deploy
+        uses: emergentdotorg/github-actions/maven-deploy@v3
+        with:
+          java-version: ${{ inputs.java-version }}
+          maven-profiles: ${{ inputs.maven-profiles }}
+          github-actor: ${{ github.actor }}
+          github-token: ${{ github.token }}
+          deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
+          deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
+          deploy-server: ${{ inputs.deploy-server }}
+          gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
+          gpg-private-key: ${{ secrets.maven_gpg_key }}

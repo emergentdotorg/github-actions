@@ -31,9 +31,9 @@ inputs:
   maven-version:
     description: 'Maven version'
     default: '3.9.9'
-  tag-prefix:
-    description: 'Tag prefix'
-    default: 'v'
+  revision:
+    description: 'Revision'
+    default: ''
   dry-run:
     description: "Perform a dry run release"
     default: ''
@@ -128,16 +128,26 @@ runs:
 
     - shell: bash
       id: resolve_version
+      env:
+        REVISION: ${{ inputs.revision }}
       # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
-        VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
-        VERSION="${VERSION%-SNAPSHOT}"
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        declare -a mvnArgs_=( -e -q -DforceStdout )
+        if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
+        VERSION="$(mvn "${mvnArgs_[@]}" help:evaluate -Dexpression=project.version)"
+        if [[ $VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
+        #VERSION="${VERSION%-SNAPSHOT}"
+        printf '%s\n' \
+          "release=${RELEASE}" \
+          "version=${VERSION}" \
+          >> $GITHUB_OUTPUT
 
     - shell: bash
+      if: ${{ steps.resolve_version.outputs.release == 'true' || inputs.deploy-server != 'central' }}
       env:
         DRY_RUN: ${{ inputs.dry-run }}
+        REVISION: ${{ inputs.revision }}
         DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
@@ -148,6 +158,7 @@ runs:
         . "${GITHUB_ACTION_PATH}/include.sh"
         declare -a mvnArgs_=( "-B" )
         declare -a mvnArgs_=( "-ntp" )
+        if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         if [ -n "${USER_SETTINGS_FILE}" ] ; then mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
         if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then mvnArgs_+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi
         if [ -n "${ACTIVATED_PROFILES}" ] ; then

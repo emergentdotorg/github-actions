@@ -20,6 +20,10 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
+      revision:
+        description: 'Revision'
+        type: string
+        default: ''
 
 jobs:
   deploy:
@@ -38,6 +42,7 @@ jobs:
         id: resolve_vars
         shell: bash
         env:
+          REVISION: ${{ inputs.revision }}
           DEPLOY_SERVER: ${{ inputs.deploy-server }}
           DEPLOY_CENTRAL_ACTOR: ${{ secrets.deploy_central_actor }}
           DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
@@ -68,7 +73,9 @@ jobs:
             *)
               ;;
           esac
-          PROJECT_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
+          declare -a mvnArgs_=( -e -q -DforceStdout )
+          if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
+          PROJECT_VERSION="$(mvn "${mvnArgs_[@]}" help:evaluate -Dexpression=project.version)"
           if [[ $PROJECT_VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \

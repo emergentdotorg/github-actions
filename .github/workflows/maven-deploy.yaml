@@ -42,7 +42,6 @@ jobs:
         id: resolve_vars
         shell: bash
         env:
-          REVISION: ${{ inputs.revision }}
           DEPLOY_SERVER: ${{ inputs.deploy-server }}
           DEPLOY_CENTRAL_ACTOR: ${{ secrets.deploy_central_actor }}
           DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
@@ -73,15 +72,9 @@ jobs:
             *)
               ;;
           esac
-          declare -a mvnArgs_=( -e -q -DforceStdout )
-          if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
-          PROJECT_VERSION="$(mvn "${mvnArgs_[@]}" help:evaluate -Dexpression=project.version)"
-          if [[ $PROJECT_VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \
             "deploy_token=${DEPLOY_TOKEN}" \
-            "project_version=${PROJECT_VERSION}" \
-            "release=${RELEASE}" \
             >> $GITHUB_OUTPUT
 
       - name: Maven Deploy
@@ -98,3 +91,4 @@ jobs:
           deploy-server: ${{ inputs.deploy-server }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
           gpg-private-key: ${{ secrets.maven_gpg_key }}
+          revision: ${{ inputs.revision }}

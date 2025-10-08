@@ -20,10 +20,13 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
-      revision:
-        description: 'Revision'
+      release-branches:
+        description: >
+          Comma separated list of branches (bash reg exp accepted) that will generate the release tags. Other branches
+          and pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: 
+          `master` or `.*` or `release.*,hotfix.*,master`...
         type: string
-        default: ''
+        default: 'main,master'
 
 jobs:
   deploy:
@@ -90,4 +93,4 @@ jobs:
           deploy-server: ${{ inputs.deploy-server }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
           gpg-private-key: ${{ secrets.maven_gpg_key }}
-          revision: ${{ inputs.revision }}
+          release-branches: ${{ inputs.release-branches }}

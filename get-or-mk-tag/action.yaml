@@ -1,0 +1,104 @@
+name: 'Get or Make Tag'
+description: 'Get the tag on HEAD or create one'
+outputs:
+  tagname:
+    description: 'The tag name'
+    value: ${{ steps.resolve_output.outputs.tagname }}
+  version:
+    description: 'The version string'
+    value: ${{ steps.resolve_output.outputs.version }}
+
+inputs:
+  github-token:
+    description: 'The github server password, required for tag commit permission'
+    default: ${{ github.token }}
+  release-branches:
+    description: >
+      Comma separated list of branches (bash reg exp accepted) that will generate the release tags. Other branches and 
+      pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: `master` or
+      `.*` or `release.*,hotfix.*,master`...
+    required: false
+    default: "main,master"
+
+runs:
+  using: 'composite'
+  steps:
+
+    - uses: actions/checkout@v4
+      with:
+        fetch-tags: true
+        token: ${{ inputs.github-token }}
+
+    - uses: emergentdotorg/github-actions/git-init-user@v3
+
+    - name: Resolve Tag
+      id: resolve_tag
+      shell: bash
+      env:
+        RELEASE_BRANCHES: ${{ inputs.release-branches }}
+      # language="shell script"
+      run: |
+        set +e
+        BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)"
+        TAGNAME="$(git describe --exact-match --match 'v*' --tags HEAD 2>/dev/null)"
+        set -e
+        VERSION="${TAGNAME#v}"
+        if [ -z "${VERSION}" ]; then
+          IS_REL_BRANCH="false"
+          for i in ${RELEASE_BRANCHES//,/$IFS} do
+            if [[ $BRANCH =~ $i ]]; then
+              IS_REL_BRANCH="true"
+            fi
+          done        
+          if [ "${IS_REL_BRANCH}" != "true" ]]; then
+            echo "::error ::No tag found for HEAD, but ${BRANCH} is not a release branch" ; exit 1
+          fi
+          NEEDTAG="true"
+        fi
+        echo "BRANCH=${BRANCH}"
+        echo "TAGNAME=${TAGNAME}"
+        echo "VERSION=${VERSION}"
+        echo "NEEDTAG=${NEEDTAG}"
+        printf '%s\n' \
+          "branch=${BRANCH}" \
+          "tagname=${TAGNAME}" \
+          "version=${VERSION}" \
+          "needtag=${NEEDTAG}" \
+          >> $GITHUB_OUTPUT
+
+    - name: Create Tag
+      id: create_tag
+      if: ${{ steps.resolve_tag.outputs.needtag == 'true' }}
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        github_token: ${{ inputs.github-token }}
+        default_bump: 'patch'
+        default_prerelease_bump: 'patch'
+        release_branches: ${{ inputs.release-branches }}
+        append_to_pre_release_tag: ''
+        fetch_all_tags: 'true'
+
+    - name: Resolve Output
+      id: resolve_output
+      shell: bash
+      env:
+        FOUND_TAGNAME: ${{ steps.resolve_tag.outputs.tagname }}
+        FOUND_VERSION: ${{ steps.resolve_tag.outputs.version }}
+        CREATED_TAGNAME: ${{ steps.create_tag.outputs.new_tag }}
+        CREATED_VERSION: ${{ steps.create_tag.outputs.new_version }}
+        IS_CREATED: ${{ steps.resolve_tag.outputs.needtag }}
+      # language="shell script"
+      run: |
+        if [ "${IS_CREATED}" = "true" ]; then
+          TAGNAME="${CREATED_TAGNAME}"
+          VERSION="${CREATED_VERSION}"
+        else
+          TAGNAME="${FOUND_TAGNAME}"
+          VERSION="${FOUND_VERSION}"
+        fi
+        echo "TAGNAME=${TAGNAME}"
+        echo "VERSION=${VERSION}"
+        printf '%s\n' \
+          "tagname=${TAGNAME}" \
+          "version=${VERSION}" \
+          >> $GITHUB_OUTPUT

@@ -1,5 +1,12 @@
 name: 'Maven Deploy Action'
 description: 'Build and deploy a Maven project'
+outputs:
+  tagname:
+    description: 'The tag name'
+    value: ${{ steps.resolve_tag.outputs.tagname }}
+  version:
+    description: 'The version string'
+    value: ${{ steps.resolve_tag.outputs.version }}
 inputs:
   java-version:
     description: 'The version of Java to build and release with'
@@ -31,9 +38,13 @@ inputs:
   maven-version:
     description: 'Maven version'
     default: '3.9.9'
-  revision:
-    description: 'Revision'
-    default: ''
+  release-branches:
+    description: >
+      Comma separated list of branches (bash reg exp accepted) that will generate the release tags. Other branches and 
+      pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: `master` or
+      `.*` or `release.*,hotfix.*,master`...
+    required: false
+    default: 'main,master'
   dry-run:
     description: "Perform a dry run release"
     default: ''
@@ -49,6 +60,12 @@ runs:
         token: ${{ inputs.github-token }}
 
     - uses: emergentdotorg/github-actions/git-init-user@v3
+
+    - id: resolve_tag
+      uses: emergentdotorg/github-actions/get-or-mk-tag@v3
+      with:
+        github-token: ${{ inputs.github-token }}
+        release-branches: ${{ inputs.release-branches }}
 
     - shell: bash
       id: resolve_vars
@@ -127,27 +144,32 @@ runs:
         catIfExists "${USER_TOOLCHAINS_FILE}"
 
     - shell: bash
-      id: resolve_version
+      id: resolve_revision
       env:
-        REVISION: ${{ inputs.revision }}
+        RESOLVED_VERSION: ${{ steps.resolve_tag.outputs.version }}
       # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
-        declare -a mvnArgs_=( -e -q -DforceStdout )
-        if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
-        VERSION="$(mvn "${mvnArgs_[@]}" help:evaluate -Dexpression=project.version)"
-        if [[ $VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
+        # declare -a mvnArgs_=( -e -q -DforceStdout )
+        # if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
+        PROJECT_VERSION="$(mvn -q -e help:evaluate -DforceStdout -Dexpression=project.version)"
+        if [ "${RESOLVED_VERSION}" != "${PROJECT_VERSION}" ]; then
+          REVISION="${RESOLVED_VERSION}"
+        fi
+        if [[ $RESOLVED_VERSION =~ "SNAPSHOT" ]]; then RELEASE=false ; else RELEASE=true ; fi
         #VERSION="${VERSION%-SNAPSHOT}"
+        echo "RELEASE=${RELEASE}"
+        echo "REVISION=${REVISION}"
         printf '%s\n' \
           "release=${RELEASE}" \
-          "version=${VERSION}" \
+          "revision=${REVISION}" \
           >> $GITHUB_OUTPUT
 
     - shell: bash
-      if: ${{ steps.resolve_version.outputs.release == 'true' || inputs.deploy-server != 'central' }}
+      if: ${{ steps.resolve_revision.outputs.release == 'true' || inputs.deploy-server != 'central' }}
       env:
         DRY_RUN: ${{ inputs.dry-run }}
-        REVISION: ${{ inputs.revision }}
+        REVISION: ${{ steps.resolve_revision.outputs.revision }}
         DEPLOY_ACTOR: ${{ inputs.deploy-actor }}
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
@@ -156,8 +178,8 @@ runs:
       # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
-        declare -a mvnArgs_=( "-B" )
-        declare -a mvnArgs_=( "-ntp" )
+        declare -a mvnArgs_=( "-B" "-ntp" )
+        mvnArgs_+=( "-DdeployAtEnd=true" )
         if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         if [ -n "${USER_SETTINGS_FILE}" ] ; then mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
         if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then mvnArgs_+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi

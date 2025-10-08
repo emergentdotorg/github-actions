@@ -45,7 +45,7 @@ runs:
         VERSION="${TAGNAME#v}"
         if [ -z "${VERSION}" ]; then
           IS_REL_BRANCH="false"
-          for i in ${RELEASE_BRANCHES//,/$IFS} do
+          for i in ${RELEASE_BRANCHES//,/$IFS} ; do
             if [[ "$BRANCH" =~ $i ]]; then
               IS_REL_BRANCH="true"
             fi

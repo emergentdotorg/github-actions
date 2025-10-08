@@ -18,7 +18,7 @@ inputs:
       pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: `master` or
       `.*` or `release.*,hotfix.*,master`...
     required: false
-    default: "main,master"
+    default: 'main,master'
 
 runs:
   using: 'composite'
@@ -50,7 +50,7 @@ runs:
               IS_REL_BRANCH="true"
             fi
           done        
-          if [ "${IS_REL_BRANCH}" != "true" ]]; then
+          if [ "${IS_REL_BRANCH}" != "true" ]; then
             echo "::error ::No tag found for HEAD, but ${BRANCH} is not a release branch" ; exit 1
           fi
           NEEDTAG="true"

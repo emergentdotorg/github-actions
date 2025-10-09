@@ -150,6 +150,7 @@ runs:
       # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
+        set +e
         # declare -a mvnArgs_=( -e -q -DforceStdout )
         # if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         PROJECT_VERSION="$(mvn -q -e help:evaluate -DforceStdout -Dexpression=project.version)"
@@ -160,6 +161,7 @@ runs:
         #VERSION="${VERSION%-SNAPSHOT}"
         echo "RELEASE=${RELEASE}"
         echo "REVISION=${REVISION}"
+        set -e
         printf '%s\n' \
           "release=${RELEASE}" \
           "revision=${REVISION}" \
@@ -183,7 +185,5 @@ runs:
         if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         if [ -n "${USER_SETTINGS_FILE}" ] ; then mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
         if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then mvnArgs_+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi
-        if [ -n "${ACTIVATED_PROFILES}" ] ; then
-          mvnArgs_+=( "-P${ACTIVATED_PROFILES}" )
-        fi
+        if [ -n "${ACTIVATED_PROFILES}" ] ; then mvnArgs_+=( "-P${ACTIVATED_PROFILES}" ) fi
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${mvnArgs_[@]}" clean deploy

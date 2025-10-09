@@ -180,7 +180,7 @@ runs:
       # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
-        declare -a mvnArgs_=( "-B" "-ntp" )
+        declare -a mvnArgs_=( "-B" "-ntp" -e -U )
         mvnArgs_+=( "-DdeployAtEnd=true" )
         if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         if [ -n "${USER_SETTINGS_FILE}" ] ; then mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi

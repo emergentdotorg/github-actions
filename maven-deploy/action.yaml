@@ -185,5 +185,5 @@ runs:
         if [ -n "${REVISION}" ] ; then mvnArgs_+=( "-Drevision=${REVISION}" ) ; fi
         if [ -n "${USER_SETTINGS_FILE}" ] ; then mvnArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
         if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then mvnArgs_+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi
-        if [ -n "${ACTIVATED_PROFILES}" ] ; then mvnArgs_+=( "-P${ACTIVATED_PROFILES}" ) fi
+        if [ -n "${ACTIVATED_PROFILES}" ] ; then mvnArgs_+=( "-P${ACTIVATED_PROFILES}" ) ; fi
         export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${mvnArgs_[@]}" clean deploy

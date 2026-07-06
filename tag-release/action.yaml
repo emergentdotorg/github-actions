@@ -15,13 +15,13 @@ inputs:
     description: "Required for permission to tag the repo."
     default: ${{ github.token }}
   sync-major-tag:
-    description: "Update with an additonal major versiopn tag."
+    description: "Update with an additional major version tag."
     required: false
 
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         fetch-tags: true
@@ -34,7 +34,6 @@ runs:
       env:
         DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
-      # language="shell script"
       run: |
         echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}"
         next_version="$( source "${GITHUB_ACTION_PATH}/semtag" final -pfos "auto" )"
@@ -53,7 +52,6 @@ runs:
       env:
         NEXT_VERSION: ${{ steps.tag_next.outputs.next_version }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
-      # language="shell script"
       run: |
         . "${GITHUB_ACTION_PATH}/include.sh"
         major_version="${NEXT_VERSION%%.*}"

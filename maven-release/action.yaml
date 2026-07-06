@@ -82,7 +82,7 @@ runs:
     - shell: bash
       id: resolve_version
       run: |
-        VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        VERSION="$(./mvnw -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
         VERSION="${VERSION%-SNAPSHOT}"
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
@@ -111,7 +111,7 @@ runs:
         mvnArgs_+=( "-DlocalCheckout=true" )
         mvnArgs_+=( "-DtagNameFormat=v@{project.version}" )
         mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        export GPG_TTY=$(tty) && mvn "${mvnArgs_[@]}" "${goals_[@]}"
+        export GPG_TTY=$(tty) && ./mvnw "${mvnArgs_[@]}" "${goals_[@]}"
 
     - shell: bash
       if: ${{ inputs.dry-run != 'true' && success() }}

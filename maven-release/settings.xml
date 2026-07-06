@@ -79,7 +79,7 @@
       <repositories>
         <repository>
           <id>emergent-nexus</id>
-          <url>https://nexus.emergent.org/repository/maven-public/</url>
+          <url>https://nexus.emergent.org/repository/maven-central-expanded/</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </repository>
@@ -87,7 +87,7 @@
       <pluginRepositories>
         <pluginRepository>
           <id>emergent-nexus</id>
-          <url>https://nexus.emergent.org/repository/maven-public/</url>
+          <url>https://nexus.emergent.org/repository/maven-central-expanded/</url>
           <releases><enabled>true</enabled></releases>
           <snapshots><enabled>true</enabled></snapshots>
         </pluginRepository>

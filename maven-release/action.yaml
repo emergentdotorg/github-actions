@@ -1,24 +1,28 @@
 name: 'Maven Release Action'
 description: 'Build and release a Maven project'
+outputs:
+  version:
+    description: 'The release version'
+    value: ${{ steps.resolve_version.outputs.version }}
 inputs:
-  java-version:
-    description: 'The version of Java to build and release with'
-    required: true
-  gpg-private-key:
-    description: 'The encoded gpg private key'
-    required: true
-  gpg-passphrase:
-    description: 'The gpg private key passphrase'
-    required: true
-  deploy-server:
-    description: 'Dist server id, e.g. central, github, nexus'
-    required: true
   deploy-actor:
     description: 'user to authenticate at the artifact repository'
     required: true
   deploy-token:
     description: 'password to authenticate at the artifact repository'
     required: true
+  deploy-server:
+    description: 'Dist server id, e.g. central, github, nexus'
+    required: true
+  gpg-passphrase:
+    description: 'The gpg private key passphrase'
+    required: true
+  gpg-private-key:
+    description: 'The encoded gpg private key'
+    required: true
+  java-version:
+    description: 'The version of Java to build and release with'
+    default: '17'
   github-actor:
     description: 'The github server username, required for tag commit permission'
     default: ${{ github.actor }}
@@ -28,103 +32,56 @@ inputs:
   maven-profiles:
     description: 'Maven profiles to activate, comma-delimited'
     default: ''
-  maven-version:
-    description: 'Maven version'
-    default: '3.9.9'
-  tag-prefix:
-    description: 'Tag prefix'
-    default: 'v'
   dry-run:
     description: "Perform a dry run release"
-    default: ''
+    default: 'false'
 
 runs:
   using: 'composite'
   steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         fetch-tags: true
         token: ${{ inputs.github-token }}
 
-    - uses: emergentdotorg/github-actions/git-init-user@v3
+    - shell: bash
+      run: |
+        git config user.name github-actions[bot]
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
     - shell: bash
       id: resolve_vars
-      env:
-        DRY_RUN: ${{ inputs.dry-run }}
-        JAVA_VERSION: ${{ inputs.java-version }}
-        MAVEN_PROFILES: ${{ inputs.maven-profiles }}
-        DEPLOY_SERVER: ${{ inputs.deploy-server }}
-        GITHUB_WORKSPACE: ${{ github.workspace }}
-        SETTINGS_DIR: '~/.m2'
-      # language="shell script"
       run: |
-        . ${GITHUB_ACTION_PATH}/include.sh
-        EXECMD_PREFIX=""
-        if [[ "${DRY_RUN}" = "true" ]]; then
-          EXECMD_PREFIX="echo "
-        fi
-        # Resolve where the default maven user settings would live.
-        RESOLVED_DIR="${SETTINGS_DIR/#~/$HOME}"
-        mkdir -p "${RESOLVED_DIR}"
-        # Determine where the settings and toolchain files actually are.
-        USER_SETTINGS_FILE="${GITHUB_ACTION_PATH}/settings.xml"
-        USER_TOOLCHAINS_FILE="${RESOLVED_DIR}/toolchains.xml"
+        . "${GITHUB_ACTION_PATH}/include.sh"
         # Convert spaces to commas in the profiles string
-        declare -a _profiles=( ${MAVEN_PROFILES} )
-        ACTIVATED_PROFILES=$(IFS=, ; echo "${_profiles[*]}")
+        declare -a _profiles=( ${{ inputs.maven-profiles }} )
+        MAVEN_PROFILES=$(IFS=, ; echo "${_profiles[*]}")
         printf '%s\n' \
-          "activated_profiles=${ACTIVATED_PROFILES}" \
-          "user_settings_file=${USER_SETTINGS_FILE}" \
-          "user_toolchains_file=${USER_TOOLCHAINS_FILE}" \
-          >> $GITHUB_OUTPUT
-        printf '%s\n' \
-          "EXECMD_PREFIX=${EXECMD_PREFIX}" \
-          "DEPLOY_SERVER=${DEPLOY_SERVER}" \
-          "ACTIVATED_PROFILES=${ACTIVATED_PROFILES}" \
-          "USER_SETTINGS_FILE=${USER_SETTINGS_FILE}" \
-          "USER_TOOLCHAINS_FILE=${USER_TOOLCHAINS_FILE}" \
+          "DEPLOY_SERVER=${{ inputs.deploy-server }}" \
+          "MAVEN_PROFILES=${MAVEN_PROFILES}" \
           >> $GITHUB_ENV
         # Build the list of SDKs to install
         {
           echo 'JAVA_SDK_VERSIONS<<EOF'
-          calcJavaVers 17
+          calcJavaVers ${{ inputs.java-version }}
           echo EOF
         } >> "$GITHUB_ENV"
 
-    - uses: actions/setup-java@v4
+    - uses: actions/setup-java@v5
       with:
         server-id: ${{ inputs.deploy-server }}
         server-username: DEPLOY_ACTOR
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: "${{ env.JAVA_SDK_VERSIONS }}"
-
-    - uses: stCarolas/setup-maven@v5
-      with:
-        maven-version: ${{ inputs.maven-version }}
-
-    - shell: bash
-      # language="shell script"
-      run: |
-        . "${GITHUB_ACTION_PATH}/include.sh"
-        java -version
-        echo "JAVA_HOME: $JAVA_HOME"
-        echo "JAVA_HOME_8_X64: $JAVA_HOME_8_X64"
-        echo "JAVA_HOME_11_X64: $JAVA_HOME_11_X64"
-        echo "JAVA_HOME_17_X64: $JAVA_HOME_17_X64"
-        echo "JAVA_HOME_21_X64: $JAVA_HOME_21_X64"
-        mvn -version
-        catIfExists "${USER_SETTINGS_FILE}"
-        catIfExists "${USER_TOOLCHAINS_FILE}"
+        #cache: 'maven'
+        #cache-dependency-path: 'sub-project/pom.xml'
 
     - shell: bash
       id: resolve_version
-      # language="shell script"
       run: |
-        . "${GITHUB_ACTION_PATH}/include.sh"
         VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
         VERSION="${VERSION%-SNAPSHOT}"
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -137,27 +94,27 @@ runs:
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
         MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
-      # language="shell script"
       run: |
-        . "${GITHUB_ACTION_PATH}/include.sh"
+        declare -a goals_=( "release:prepare" )
+        if [ "${DRY_RUN}" = "true" ] ; then goals_+=( "release:perform" ) fi
         declare -a mvnArgs_=( "-B" )
         declare -a argArgs_=( "-ntp" )
-        if [ -n "${USER_SETTINGS_FILE}" ] ; then argArgs_+=( "-s" "${USER_SETTINGS_FILE}" ) ; fi
-        if [ -n "${USER_TOOLCHAINS_FILE}" ] ; then argArgs_+=( "-t" "${USER_TOOLCHAINS_FILE}" ) ; fi
-        if [ -n "${ACTIVATED_PROFILES}" ] ; then
-          argArgs_+=( "-P${ACTIVATED_PROFILES}" )
-          mvnArgs_+=( "-DreleaseProfiles=${ACTIVATED_PROFILES}" )
-          mvnArgs_+=( "-DpreparationProfiles=${ACTIVATED_PROFILES}" )
+        argArgs_+=( "-s" "${GITHUB_ACTION_PATH}/settings.xml")
+        if [ -n "${MAVEN_PROFILES}" ] ; then
+          argArgs_+=( "-P${MAVEN_PROFILES}" )
+          mvnArgs_+=( "-DreleaseProfiles=${MAVEN_PROFILES}" )
+          mvnArgs_+=( "-DpreparationProfiles=${MAVEN_PROFILES}" )
         fi
         mvnArgs_+=( "${argArgs_[@]}" )
         mvnArgs_+=( "-Darguments=${argArgs_[*]}" )
         mvnArgs_+=( "-DpushChanges=false" )
         mvnArgs_+=( "-DlocalCheckout=true" )
         mvnArgs_+=( "-DtagNameFormat=v@{project.version}" )
-        mvnArgs_+=( "-DscmCommentPrefix=[GitHub] " )
-        export GPG_TTY=$(tty) && ${EXECMD_PREFIX} mvn "${mvnArgs_[@]}" release:prepare release:perform
+        mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
+        export GPG_TTY=$(tty) && mvn "${mvnArgs_[@]}" "${goals_[@]}"
 
     - shell: bash
-      if: ${{ success() }}
-      # language="shell script"
-      run: ${EXECMD_PREFIX} git push --follow-tags --atomic
+      if: ${{ inputs.dry-run != 'true' && success() }}
+      run: |
+        ${EXEC_PREFIX} git push
+        ${EXEC_PREFIX} git push --tags

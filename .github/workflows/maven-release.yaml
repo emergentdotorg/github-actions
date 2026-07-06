@@ -24,29 +24,26 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # Map the job outputs to step outputs
     outputs:
-      release_version: ${{ steps.resolve_version.outputs.release_version }}
+      release_version: ${{ steps.maven_release.outputs.version }}
     permissions:
-      # Give the default GITHUB_TOKEN write permission to commit and push the
-      # added or changed files to the repository.
+      # Give the default GITHUB_TOKEN write permission to commit and push the added or changed files to the repository.
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Resolve Vars
+      - name: Resolve Variables
         id: resolve_vars
         shell: bash
         env:
-          DEPLOY_SERVER: ${{ inputs.deploy-server }}
           DEPLOY_CENTRAL_ACTOR: ${{ secrets.deploy_central_actor }}
           DEPLOY_CENTRAL_TOKEN: ${{ secrets.deploy_central_token }}
-          DEPLOY_GITHUB_ACTOR: 'emergentbot'
-          DEPLOY_GITHUB_TOKEN: ${{ secrets.emergentbot_deploy_token }}
           DEPLOY_EMERGENT_NEXUS_ACTOR: ${{ secrets.deploy_emergent_nexus_actor }}
           DEPLOY_EMERGENT_NEXUS_TOKEN: ${{ secrets.deploy_emergent_nexus_token }}
+          DEPLOY_GITHUB_ACTOR: 'emergentbot'
+          DEPLOY_GITHUB_TOKEN: ${{ secrets.emergentbot_deploy_token }}
+          DEPLOY_SERVER: ${{ inputs.deploy-server }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        # language="shell script"
         run: |
           case "${DEPLOY_SERVER}" in
             central)
@@ -68,58 +65,21 @@ jobs:
             *)
               ;;
           esac
-          GITVER_VERSION="$(mvn -e help:evaluate -q -DforceStdout -Dexpression=gitver.version)"
-          if [[ $GITVER_VERSION =~ "^[A-Za-z0-9_.+-]+$" ]]; then GITVER_PRESENT=true ; else GITVER_PRESENT=false ; fi
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \
             "deploy_token=${DEPLOY_TOKEN}" \
-            "gitver_present=${GITVER_PRESENT}" \
-            "gitver_version=${GITVER_VERSION}" \
             >> $GITHUB_OUTPUT
 
-      #- name: Maven Release with GitVer
-      #  if: ${{ steps.resolve_vars.outputs.gitver_present == 'true' }}
-      #  id: maven_release_with_gitver
-      #  uses: emergentdotorg/github-actions/semver-maven-release@v3
-      #  with:
-      #    java-version: ${{ inputs.java-version }}
-      #    maven-profiles: ${{ inputs.maven-profiles }}
-      #    github-actor: ${{ github.actor }}
-      #    github-token: ${{ github.token }}
-      #    deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
-      #    deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
-      #    deploy-server: ${{ inputs.deploy-server }}
-      #    gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
-      #    gpg-private-key: ${{ secrets.maven_gpg_key }}
-
       - name: Maven Release
-        #if: ${{ steps.resolve_vars.outputs.gitver_present != 'true' }}
-        id: maven_release_sans_gitver
-        uses: emergentdotorg/github-actions/maven-release@v3
+        id: maven_release
+        uses: emergentdotorg/github-actions/maven-release@v4
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}
-          github-actor: ${{ github.actor }}
-          github-token: ${{ github.token }}
+          deploy-server: ${{ inputs.deploy-server }}
           deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
           deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
-          deploy-server: ${{ inputs.deploy-server }}
+          github-actor: ${{ github.actor }}
+          github-token: ${{ github.token }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
           gpg-private-key: ${{ secrets.maven_gpg_key }}
-
-      - name: Resolve Version
-        id: resolve_version
-        shell: bash
-        env:
-          SANS_GITVER_VERSION: ${{ steps.maven_release_sans_gitver.outputs.version }}
-          WITH_GITVER_VERSION: ${{ steps.maven_release_with_gitver.outputs.version }}
-        # language="shell script"
-        run: |
-          if [ -n "${WITH_GITVER_VERSION}" ]; then
-            RELEASE_VERSION="${WITH_GITVER_VERSION}"
-          else
-            RELEASE_VERSION="${SANS_GITVER_VERSION}"
-          fi
-          printf '%s\n' \
-            "release_version=${RELEASE_VERSION}" \
-            >> $GITHUB_OUTPUT

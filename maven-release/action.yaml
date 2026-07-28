@@ -106,7 +106,7 @@ runs:
         cliargs_+=( "-DlocalCheckout=true" )
         cliargs_+=( "-DtagNameFormat=v@{project.version}" )
         cliargs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        export GPG_TTY=$(tty) && ./mvnw -X ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
+        export GPG_TTY=$(tty) && ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
 
     - shell: bash
       if: ${{ inputs.dry-run != 'true' && success() }}

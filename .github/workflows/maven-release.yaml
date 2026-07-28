@@ -20,6 +20,10 @@ on:
         description: 'Maven profiles to activate, comma-delimited'
         type: string
         default: ''
+      maven-release-args:
+        description: 'Additional arguments to pass to the Maven release command-line'
+        type: string
+        default: ''
 
 jobs:
   release:
@@ -30,7 +34,7 @@ jobs:
       # Give the default GITHUB_TOKEN write permission to commit and push the added or changed files to the repository.
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Resolve Variables
         id: resolve_vars
@@ -70,16 +74,47 @@ jobs:
             "deploy_token=${DEPLOY_TOKEN}" \
             >> $GITHUB_OUTPUT
 
+      #- id: resolve-deploy-central
+      #  if: ${{ 'central' == inputs.deploy-server }}
+      #  shell: bash
+      #  env:
+      #    DEPLOY_ACTOR: ${{ secrets.deploy_central_actor }}
+      #    DEPLOY_TOKEN: ${{ secrets.deploy_central_token }}
+      #  run: printf '%s\n' "DEPLOY_ACTOR=${DEPLOY_ACTOR}" "DEPLOY_TOKEN=${DEPLOY_TOKEN}" >> $GITHUB_ENV
+      #
+      #- id: resolve-deploy-github
+      #  if: ${{ 'github' == inputs.deploy-server }}
+      #  shell: bash
+      #  env:
+      #    DEPLOY_ACTOR: ${{ github.actor }}
+      #    DEPLOY_TOKEN: ${{ github.token }}
+      #  run: printf '%s\n' "DEPLOY_ACTOR=${DEPLOY_ACTOR}" "DEPLOY_TOKEN=${DEPLOY_TOKEN}" >> $GITHUB_ENV
+      #
+      #- id: resolve-deploy-emergent-github
+      #  if: ${{ 'emergent-github' == inputs.deploy-server }}
+      #  shell: bash
+      #  env:
+      #    DEPLOY_ACTOR: 'emergentbot'
+      #    DEPLOY_TOKEN: ${{ secrets.emergentbot_deploy_token }}
+      #  run: printf '%s\n' "DEPLOY_ACTOR=${DEPLOY_ACTOR}" "DEPLOY_TOKEN=${DEPLOY_TOKEN}" >> $GITHUB_ENV
+      #
+      #- id: resolve-deploy-emergent-nexus
+      #  if: ${{ 'emergent-nexus' == inputs.deploy-server }}
+      #  shell: bash
+      #  env:
+      #    DEPLOY_ACTOR: ${{ secrets.deploy_emergent_nexus_actor }}
+      #    DEPLOY_TOKEN: ${{ secrets.deploy_emergent_nexus_token }}
+      #  run: printf '%s\n' "DEPLOY_ACTOR=${DEPLOY_ACTOR}" "DEPLOY_TOKEN=${DEPLOY_TOKEN}" >> $GITHUB_ENV
+
       - name: Maven Release
         id: maven_release
-        uses: emergentdotorg/github-actions/maven-release@v4
+        uses: emergentdotorg/github-actions/maven-release@v5
         with:
           java-version: ${{ inputs.java-version }}
           maven-profiles: ${{ inputs.maven-profiles }}
+          maven-release-args: ${{ inputs.maven-release-args }}
           deploy-server: ${{ inputs.deploy-server }}
           deploy-actor: ${{ steps.resolve_vars.outputs.deploy_actor }}
           deploy-token: ${{ steps.resolve_vars.outputs.deploy_token }}
-          github-actor: ${{ github.actor }}
-          github-token: ${{ github.token }}
           gpg-passphrase: ${{ secrets.maven_gpg_passphrase }}
           gpg-private-key: ${{ secrets.maven_gpg_key }}

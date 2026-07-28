@@ -1,0 +1,38 @@
+name: Bump version
+on:
+  #push:
+  #  branches:
+  #    - master
+  workflow_dispatch:
+    inputs:
+      build_release:
+        description: 'Whether to build a GitHub release package'
+        type: boolean
+        default: false
+      default_bump:
+        description: 'Which type of bump to use when none explicitly provided when commiting to a release branch.'
+        type: choice
+        default: patch
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ github.token }}
+          default_bump: ${{ inputs.default_bump || 'patch' }}
+      - name: Create a GitHub release
+        if: ${{ inputs.build_release }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}

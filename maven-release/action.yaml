@@ -23,12 +23,9 @@ inputs:
   java-version:
     description: 'The version of Java to build and release with'
     default: '17'
-  github-actor:
-    description: 'The github server username, required for tag commit permission'
-    default: ${{ github.actor }}
-  github-token:
-    description: 'The github server password, required for tag commit permission'
-    default: ${{ github.token }}
+  maven-release-args:
+    description: 'Additional arguments to pass to the Maven release command-line'
+    default: ''
   maven-profiles:
     description: 'Maven profiles to activate, comma-delimited'
     default: ''
@@ -40,16 +37,18 @@ runs:
   using: 'composite'
   steps:
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
         fetch-tags: true
-        token: ${{ inputs.github-token }}
 
     - shell: bash
+      env:
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_ACTOR_ID: ${{ github.actor_id }}
       run: |
-        git config user.name github-actions[bot]
-        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        git config --global user.name "${GITHUB_ACTOR}"
+        git config --global user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
 
     - shell: bash
       id: resolve_vars
@@ -93,25 +92,22 @@ runs:
         DEPLOY_TOKEN: ${{ inputs.deploy-token }}
         MAVEN_GPG_KEY: ${{ inputs.gpg-private-key }}
         MAVEN_GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        MAVEN_RELEASE_ARGS: ${{ inputs.maven-release-args }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
       run: |
+        export GPG_TTY=$(tty)
         declare -a goals_=( "release:prepare" )
         if [ "${DRY_RUN}" != "true" ] ; then goals_+=( "release:perform" ) ; fi
-        declare -a mvnArgs_=( "-B" )
-        declare -a argArgs_=( "-ntp" )
-        argArgs_+=( "-s" "${GITHUB_ACTION_PATH}/settings.xml")
-        if [ -n "${MAVEN_PROFILES}" ] ; then
-          argArgs_+=( "-P${MAVEN_PROFILES}" )
-          mvnArgs_+=( "-DreleaseProfiles=${MAVEN_PROFILES}" )
-          mvnArgs_+=( "-DpreparationProfiles=${MAVEN_PROFILES}" )
-        fi
-        mvnArgs_+=( "${argArgs_[@]}" )
-        mvnArgs_+=( "-Darguments=${argArgs_[*]}" )
-        mvnArgs_+=( "-DpushChanges=false" )
-        mvnArgs_+=( "-DlocalCheckout=true" )
-        mvnArgs_+=( "-DtagNameFormat=v@{project.version}" )
-        mvnArgs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        export GPG_TTY=$(tty) && ./mvnw "${mvnArgs_[@]}" "${goals_[@]}"
+        declare -a envargs_=( -B -ntp -e -s "${GITHUB_ACTION_PATH}/settings.xml" )
+        if [ -n "${MAVEN_PROFILES}" ] ; then envargs_+=( "-P${MAVEN_PROFILES}" ) ; fi
+        export MAVEN_ARGS="${envargs_[*]}"
+        declare -a cliargs_=( )
+        cliargs_+=( "-DpushChanges=false" )
+        cliargs_+=( "-DlocalCheckout=true" )
+        cliargs_+=( "-DtagNameFormat=v@{project.version}" )
+        cliargs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
+        echo "Invoking:" ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
+        ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
 
     - shell: bash
       if: ${{ inputs.dry-run != 'true' && success() }}

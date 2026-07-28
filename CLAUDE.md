@@ -99,5 +99,5 @@ Projects consuming these actions typically need:
 - All actions set up Git user config as `github-actions[bot]`
 - Maven operations use `-B` (batch mode), `-ntp` (no transfer progress), `-e` (show errors)
 - The repository uses `stCarolas/setup-maven@v5` for Maven installation
-- Actions use `actions/setup-java@v4` with Temurin distribution
+- Actions use `actions/setup-java@v5` with Temurin distribution
 - Git operations use `--follow-tags --atomic` for pushing to ensure consistency

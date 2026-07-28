@@ -76,12 +76,14 @@ runs:
         server-password: DEPLOY_TOKEN
         distribution: 'temurin'
         java-version: "${{ env.JAVA_SDK_VERSIONS }}"
+        show-download-progress: false
         #cache: 'maven'
         #cache-dependency-path: 'sub-project/pom.xml'
 
     - shell: bash
       id: resolve_version
       run: |
+        echo "MAVEN_ARGS=${MAVEN_ARGS}"
         VERSION="$( ./mvnw help:evaluate -q -DforceStdout -Dexpression=project.version )"
         VERSION="${VERSION%-SNAPSHOT}"
         echo "version=${VERSION}" >> "$GITHUB_OUTPUT"

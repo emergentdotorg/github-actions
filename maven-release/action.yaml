@@ -60,6 +60,7 @@ runs:
         printf '%s\n' \
           "DEPLOY_SERVER=${{ inputs.deploy-server }}" \
           "MAVEN_PROFILES=${MAVEN_PROFILES}" \
+          "MAVEN_ARGS=-ntp -e -s ${GITHUB_ACTION_PATH}/settings.xml" \
           >> $GITHUB_ENV
         # Build the list of SDKs to install
         {
@@ -81,9 +82,9 @@ runs:
     - shell: bash
       id: resolve_version
       run: |
-        VERSION="$(./mvnw -e help:evaluate -q -DforceStdout -Dexpression=project.version)"
+        VERSION="$( ./mvnw help:evaluate -q -DforceStdout -Dexpression=project.version )"
         VERSION="${VERSION%-SNAPSHOT}"
-        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
     - shell: bash
       env:
@@ -95,19 +96,15 @@ runs:
         MAVEN_RELEASE_ARGS: ${{ inputs.maven-release-args }}
         GITHUB_WORKSPACE: ${{ github.workspace }}
       run: |
-        export GPG_TTY=$(tty)
+        if [ -n "${MAVEN_PROFILES}" ] ; then export MAVEN_ARGS="${MAVEN_ARGS} -P${MAVEN_PROFILES}" ; fi
         declare -a goals_=( "release:prepare" )
         if [ "${DRY_RUN}" != "true" ] ; then goals_+=( "release:perform" ) ; fi
-        declare -a envargs_=( -B -ntp -e -s "${GITHUB_ACTION_PATH}/settings.xml" )
-        if [ -n "${MAVEN_PROFILES}" ] ; then envargs_+=( "-P${MAVEN_PROFILES}" ) ; fi
-        export MAVEN_ARGS="${envargs_[*]}"
-        declare -a cliargs_=( )
+        declare -a cliargs_=( "-B" )
         cliargs_+=( "-DpushChanges=false" )
         cliargs_+=( "-DlocalCheckout=true" )
         cliargs_+=( "-DtagNameFormat=v@{project.version}" )
         cliargs_+=( "-DscmCommentPrefix=[GitHub] [no ci]" )
-        echo "Invoking:" ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
-        ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
+        export GPG_TTY=$(tty) && ./mvnw ${MAVEN_RELEASE_ARGS} "${cliargs_[@]}" "${goals_[@]}"
 
     - shell: bash
       if: ${{ inputs.dry-run != 'true' && success() }}

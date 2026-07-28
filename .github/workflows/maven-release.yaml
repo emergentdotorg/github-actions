@@ -72,7 +72,7 @@ jobs:
           printf '%s\n' \
             "deploy_actor=${DEPLOY_ACTOR}" \
             "deploy_token=${DEPLOY_TOKEN}" \
-            >> $GITHUB_OUTPUT
+            >> "$GITHUB_OUTPUT"
 
       #- id: resolve-deploy-central
       #  if: ${{ 'central' == inputs.deploy-server }}
